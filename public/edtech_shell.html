@@ -1,0 +1,2140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduStandard VN - Chuyển Đổi Số Giáo Dục (CV 5512 & CV 7991)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- PptxGenJS CDN for real PowerPoint .pptx export -->
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <!-- Google Fonts: Be Vietnam Pro & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 h-screen flex flex-col overflow-hidden" x-data="edtechApp()">
+
+  <!-- 1. TOPBAR CẤU TRÚC CHUẨN HARNESS -->
+  <header class="h-16 px-4 md:px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 select-none z-20 gap-3 no-print">
+    <!-- Zone 1: Wordmark -->
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex items-center gap-2">
+        <span class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+          VN
+        </span>
+        <span class="text-base md:text-lg font-bold tracking-tight text-slate-900 hidden sm:inline">
+          EduStandard VN
+        </span>
+      </div>
+    </div>
+
+    <!-- Zone 2: Bộ chọn nhanh Môn học, Khối lớp, Bộ sách, Tên bài học -->
+    <div class="flex-1 max-w-2xl flex items-center gap-2 overflow-x-auto py-1">
+      <!-- Môn học -->
+      <div class="flex items-center shrink-0">
+        <select 
+          x-model="metadata.subject" 
+          @change="onMetadataChange()"
+          class="text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer hover:bg-slate-100"
+        >
+          <template x-for="item in options.subjects" :key="item">
+            <option :value="item" x-text="item"></option>
+          </template>
+        </select>
+      </div>
+
+      <!-- Khối lớp -->
+      <div class="flex items-center shrink-0">
+        <select 
+          x-model="metadata.grade" 
+          @change="onMetadataChange()"
+          class="text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer hover:bg-slate-100"
+        >
+          <template x-for="item in options.grades" :key="item">
+            <option :value="item" x-text="item"></option>
+          </template>
+        </select>
+      </div>
+
+      <!-- Bộ sách thống nhất toàn quốc: Kết Nối Tri Thức -->
+      <div class="hidden xl:flex items-center shrink-0">
+        <span 
+          class="text-xs font-semibold text-blue-900 bg-blue-50/80 border border-blue-200 rounded-lg px-2.5 py-1.5 select-none"
+          title="Bộ sách giáo khoa duy nhất thống nhất toàn quốc: Kết Nối Tri Thức Với Cuộc Sống"
+        >
+          Sách: Kết Nối Tri Thức
+        </span>
+      </div>
+
+      <!-- Tên bài học -->
+      <div class="flex-1 min-w-[150px] max-w-sm hidden md:flex items-center">
+        <input 
+          type="text" 
+          x-model="metadata.lessonName" 
+          placeholder="Nhập tên bài học..." 
+          class="w-full text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 truncate"
+        />
+      </div>
+    </div>
+
+    <!-- Zone 3: Navigation Quick Links & Actions -->
+    <div class="flex items-center gap-2 shrink-0">
+      
+      <!-- Nút Kho Sách (SGK/SGV/SBT) -->
+      <button 
+        @click="activeMode = 'library'" 
+        :class="activeMode === 'library' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'text-slate-700 hover:bg-slate-100 border-slate-200'"
+        class="px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-colors"
+      >
+        <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        <span class="hidden lg:inline">Kho Sách</span>
+        <span class="px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-mono" x-text="uploadedBooks.length"></span>
+      </button>
+
+      <!-- Nút Đám Mây Lưu Trữ -->
+      <button 
+        @click="activeMode = 'cloud'" 
+        :class="activeMode === 'cloud' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'text-slate-700 hover:bg-slate-100 border-slate-200'"
+        class="px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-colors"
+      >
+        <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+        <span class="hidden xl:inline">Cloud Lưu Trữ</span>
+      </button>
+
+      <!-- CÀI ĐẶT THÔNG TIN GIÁO VIÊN (Yêu cầu trọng tâm: Giáo viên Hồ Minh Luân) -->
+      <button 
+        @click="showSettingsModal = true" 
+        class="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-800 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-2 border border-slate-200 transition-all"
+        title="Cài đặt thông tin cá nhân giáo viên"
+      >
+        <div class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">
+          <span x-text="teacherProfile.name.charAt(0)"></span>
+        </div>
+        <span class="font-bold max-w-[120px] truncate" x-text="teacherProfile.name"></span>
+        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </button>
+
+      <button 
+        @click="showHandoverModal = true" 
+        class="px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+      >
+        <span>Kiểm chứng</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. KHUNG SPLIT-PANE WORKSPACE CHÍNH -->
+  <div class="flex flex-1 min-h-0 overflow-hidden">
+    
+    <!-- SIDEBAR ĐIỀU HƯỚNG (380PX) -->
+    <aside class="w-[380px] shrink-0 border-r border-slate-200 bg-white flex flex-col h-full overflow-y-auto select-none no-print">
+      
+      {/* User Card: Hồ Minh Luân */}
+      <div className="p-4 border-b border-slate-100 bg-slate-50 space-y-2">
+        <div class="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+              <span x-text="teacherProfile.name.charAt(0)"></span>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-xs text-slate-900 truncate" x-text="teacherProfile.name"></span>
+                <span class="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded font-semibold shrink-0">GV</span>
+              </div>
+              <p class="text-[11px] text-slate-500 truncate mt-0.5" x-text="teacherProfile.school"></p>
+            </div>
+          </div>
+          <button 
+            @click="showSettingsModal = true"
+            class="p-1.5 text-slate-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-slate-200 text-xs font-semibold"
+          >
+            Cài đặt
+          </button>
+        </div>
+
+        <!-- Môn mẫu nạp nhanh -->
+        <div class="pt-1">
+          <div class="grid grid-cols-2 gap-2">
+            <button 
+              @click="loadPreset('toan')" 
+              :class="metadata.subject === 'Toán học' ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'"
+              class="px-2.5 py-1.5 text-xs font-semibold rounded-lg border text-left transition-all"
+            >
+              <div class="font-bold text-xs">Toán 10</div>
+              <div class="text-[10px] text-slate-500 font-normal truncate">Hàm số bậc hai</div>
+            </button>
+            <button 
+              @click="loadPreset('vatly')" 
+              :class="metadata.subject === 'Vật lí' ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'"
+              class="px-2.5 py-1.5 text-xs font-semibold rounded-lg border text-left transition-all"
+            >
+              <div class="font-bold text-xs">Vật lí 10</div>
+              <div class="text-[10px] text-slate-500 font-normal truncate">Định luật II Newton</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN WORKFLOW NAVIGATION -->
+      <div class="p-4 flex-1 space-y-1.5">
+        
+        <!-- NGUỒN ĐẦU VÀO: KHO SÁCH SGK/SGV/SBT -->
+        <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-2 block mb-1">
+          Nguồn học liệu đầu vào:
+        </label>
+
+        <button 
+          @click="activeMode = 'library'" 
+          :class="activeMode === 'library' ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-50/60 hover:bg-blue-50 text-slate-900 border border-blue-200'"
+          class="w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all"
+        >
+          <div :class="activeMode === 'library' ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white shadow-xs'" class="p-2 rounded-lg shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm leading-tight">Kho Sách SGK, SGV, SBT</span>
+              <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-800" x-text="uploadedBooks.length + ' tệp'"></span>
+            </div>
+            <div :class="activeMode === 'library' ? 'text-blue-100' : 'text-slate-600'" class="text-xs mt-0.5">
+              Nạp sách nguồn để tự động sinh nội dung
+            </div>
+          </div>
+        </button>
+
+        <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-2 pt-2.5 block mb-1">
+          3 Phân hệ sư phạm chuẩn hóa:
+        </label>
+
+        <!-- 1. 'Soạn KHBD 5512' -->
+        <button 
+          @click="activeMode = 'khbd'" 
+          :class="activeMode === 'khbd' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-800'"
+          class="w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all"
+        >
+          <div :class="activeMode === 'khbd' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600'" class="p-2 rounded-lg shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          </div>
+          <div>
+            <div class="font-bold text-sm leading-tight">Soạn KHBD 5512</div>
+            <div :class="activeMode === 'khbd' ? 'text-blue-100' : 'text-slate-500'" class="text-xs mt-0.5">
+              4 hoạt động & 4 bước chỉnh sửa trực tiếp
+            </div>
+          </div>
+        </button>
+
+        <!-- 2. 'Trình Chiếu Slide Bài Giảng' -->
+        <button 
+          @click="activeMode = 'slides'" 
+          :class="activeMode === 'slides' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-800'"
+          class="w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all"
+        >
+          <div :class="activeMode === 'slides' ? 'bg-blue-500 text-white' : 'bg-emerald-50 text-emerald-600'" class="p-2 rounded-lg shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+          </div>
+          <div>
+            <div class="font-bold text-sm leading-tight">Trình Chiếu Slide Bài Giảng</div>
+            <div :class="activeMode === 'slides' ? 'text-blue-100' : 'text-slate-500'" class="text-xs mt-0.5">
+              Slide 16:9, thẻ kiến thức & Fullscreen
+            </div>
+          </div>
+        </button>
+
+        <!-- 3. 'Ngân Hàng Đề Thi 7991' -->
+        <button 
+          @click="activeMode = 'exam'" 
+          :class="activeMode === 'exam' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-800'"
+          class="w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all"
+        >
+          <div :class="activeMode === 'exam' ? 'bg-blue-500 text-white' : 'bg-indigo-50 text-indigo-600'" class="p-2 rounded-lg shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+          </div>
+          <div>
+            <div class="font-bold text-sm leading-tight">Ngân Hàng Đề Thi 7991</div>
+            <div :class="activeMode === 'exam' ? 'text-blue-100' : 'text-slate-500'" class="text-xs mt-0.5">
+              Cấu trúc 4 phần · Sliders ma trận 40-30-30
+            </div>
+          </div>
+        </button>
+
+        <!-- Cloud Lưu Trữ -->
+        <button 
+          @click="activeMode = 'cloud'" 
+          :class="activeMode === 'cloud' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-700'"
+          class="w-full flex items-start gap-3 p-2.5 rounded-xl text-left transition-all"
+        >
+          <div :class="activeMode === 'cloud' ? 'bg-blue-500 text-white' : 'bg-indigo-50 text-indigo-600'" class="p-1.5 rounded-lg shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+          </div>
+          <div class="text-xs">
+            <span class="font-bold block">Cloud Lưu Trữ & Xuất File</span>
+            <span :class="activeMode === 'cloud' ? 'text-blue-100' : 'text-slate-500'">Đa định dạng: Word, PDF, PPTX</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Quick Export Area -->
+      <div class="p-4 border-t border-slate-200 bg-white space-y-2">
+        <div class="grid grid-cols-2 gap-2">
+          <button 
+            @click="downloadKHBDWord()" 
+            class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+          >
+            <span>Xuất Word (.doc)</span>
+          </button>
+          <button 
+            @click="window.print()" 
+            class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+          >
+            <span>In Ấn / PDF</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="flex-1 min-w-0 overflow-y-auto bg-slate-50/70 p-4 md:p-6">
+      
+      <!-- ======================================================== -->
+      <!-- MODULE 0: KHO HỌC LIỆU SỐ & TẢI SÁCH (SGK/SGV/SBT)       -->
+      <!-- ======================================================== -->
+      <div x-show="activeMode === 'library'" class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- 3-Step Pipeline Banner -->
+        <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-md border border-blue-800 space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded bg-blue-500/30 text-blue-200 text-xs font-bold uppercase tracking-wider border border-blue-400/30">
+                  Quy Trình Sư Phạm Đầu Vào
+                </span>
+                <span class="text-xs text-slate-300">
+                  Tải SGK, SGV, SBT lên để làm căn cứ sinh giáo án & slide chuẩn xác
+                </span>
+              </div>
+              <h1 class="text-xl md:text-2xl font-black tracking-tight text-white mt-1.5">
+                Kho Học Liệu Số & Nạp Sách Giáo Khoa (SGK), Sách Giáo Viên (SGV), Sách Bài Tập (SBT)
+              </h1>
+            </div>
+
+            <button 
+              @click="showUploadDialog = true"
+              class="px-4 py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold rounded-xl shadow-lg flex items-center gap-2 shrink-0 transition-all transform hover:-translate-y-0.5"
+            >
+              <span>+ Tải Tệp Sách Của Tôi Lên</span>
+            </button>
+          </div>
+
+          <!-- 3 Step Indicators -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+            <div class="p-3 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center gap-3">
+              <span class="w-7 h-7 rounded-full bg-blue-500 text-white font-black text-xs flex items-center justify-center shrink-0">1</span>
+              <div>
+                <p class="text-xs font-bold text-white">Bước 1: Tải & Chọn Học Liệu</p>
+                <p class="text-[11px] text-blue-200">Nạp SGK (Kiến thức), SGV (Tiến trình), SBT (Bài tập)</p>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center gap-3">
+              <span class="w-7 h-7 rounded-full bg-indigo-500 text-white font-black text-xs flex items-center justify-center shrink-0">2</span>
+              <div>
+                <p class="text-xs font-bold text-white">Bước 2: Chọn Lớp & Bài Học</p>
+                <p class="text-[11px] text-blue-200">Hệ thống tự động trích xuất chỉ mục bài học từ sách</p>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center gap-3">
+              <span class="w-7 h-7 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center shrink-0">3</span>
+              <div>
+                <p class="text-xs font-bold text-white">Bước 3: Chuyển Sang Tạo Học Liệu</p>
+                <p class="text-[11px] text-emerald-200">Sinh KHBD 5512, Slide 16:9, Đề thi 7991 tự động</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sách Danh Mục & Launchpad -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- Danh sách sách (Col 5) -->
+          <div class="lg:col-span-5 space-y-3">
+            <h3 class="font-bold text-sm text-slate-900">Sách Đã Nạp Vào Hệ Thống (<span x-text="uploadedBooks.length"></span>)</h3>
+            
+            <div class="space-y-3 max-h-[550px] overflow-y-auto pr-1">
+              <template x-for="(book, idx) in uploadedBooks" :key="book.id">
+                <div 
+                  @click="selectedBookId = book.id"
+                  :class="selectedBookId === book.id ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:border-slate-300'"
+                  class="p-4 rounded-xl border cursor-pointer transition-all text-left"
+                >
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span :class="book.category === 'sgk' ? 'bg-blue-100 text-blue-800' : book.category === 'sgv' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase" x-text="book.category.toUpperCase()"></span>
+                    <span class="text-[10px] text-slate-500 font-mono" x-text="book.fileSize + ' · ' + book.pageCount + ' trang'"></span>
+                  </div>
+                  <h4 class="font-bold text-xs text-slate-900 leading-snug" x-text="book.name"></h4>
+                  <p class="text-[11px] text-slate-500 mt-1" x-text="book.subject + ' · ' + book.grade + ' · ' + book.curriculum"></p>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Trích xuất bài học & Nút Chuyển Tiếp (Col 7) -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div>
+                  <span class="text-xs text-blue-700 font-semibold uppercase">Tài liệu đang chọn</span>
+                  <h3 class="font-bold text-sm text-slate-900 mt-0.5" x-text="currentBook().name"></h3>
+                </div>
+                <span class="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2 py-1 rounded">✓ Đã chỉ mục</span>
+              </div>
+
+              <!-- Danh sách bài học trích xuất -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-bold text-slate-800 block">Danh Sách Bài Học Đã Lọc Tự Động Từ Sách:</label>
+                  <span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold border border-emerald-200">Đầy đủ Bài số & Tên bài</span>
+                </div>
+                <template x-for="ch in currentBook().chapters" :key="ch.id">
+                  <div 
+                    @click="selectedLessonName = (ch.lessonNumber ? 'Bài ' + ch.lessonNumber + ': ' + ch.lessonName : ch.lessonName)"
+                    :class="selectedLessonName.includes(ch.lessonName) ? 'border-indigo-500 bg-indigo-50/70 shadow-xs' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'"
+                    class="p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3"
+                  >
+                    <div class="flex items-center gap-3 min-w-0">
+                      <!-- Badge Bài Số -->
+                      <div class="px-2 py-1 rounded bg-blue-100 text-blue-900 border border-blue-200 text-center shrink-0">
+                        <span class="block text-[8px] font-black uppercase">BÀI SỐ</span>
+                        <span class="text-xs font-black" x-text="ch.lessonNumber || '15'"></span>
+                      </div>
+                      <div class="min-w-0">
+                        <span class="text-[10px] font-bold text-indigo-700 uppercase block truncate" x-text="ch.chapterTitle"></span>
+                        <h4 class="font-bold text-xs text-slate-900 truncate" x-text="ch.lessonName"></h4>
+                        <p class="text-[11px] text-slate-500 line-clamp-1" x-text="ch.summary"></p>
+                      </div>
+                    </div>
+
+                    <div class="shrink-0">
+                      <span 
+                        x-show="selectedLessonName.includes(ch.lessonName)" 
+                        class="px-2 py-0.5 rounded bg-indigo-600 text-white font-bold text-[10px]"
+                      >
+                        Đang chọn
+                      </span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Launchpad 3 Nút Chuyển Tiếp (Yêu cầu cốt lõi) -->
+              <div class="pt-4 border-t border-slate-200 space-y-2">
+                <label class="font-bold text-xs uppercase text-slate-800 block">
+                  ⚡ Chuyển Tiếp Sang Giao Diện Khởi Tạo:
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <button 
+                    @click="launchModule('khbd')"
+                    class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs text-left transition-all"
+                  >
+                    <div class="font-bold text-xs">Tạo KHBD 5512</div>
+                    <div class="text-[10px] text-blue-100 mt-0.5">Tiến trình 4 hoạt động</div>
+                  </button>
+
+                  <div class="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs text-left transition-all flex flex-col justify-between">
+                    <div>
+                      <div class="flex items-center justify-between">
+                        <div class="font-bold text-xs">Tạo Slide 16:9</div>
+                        <select x-model.number="targetSlideCount" @click.stop class="text-[10px] font-bold text-emerald-950 bg-white rounded px-1 py-0.5 border border-emerald-300">
+                          <option :value="4">4 slide</option>
+                          <option :value="6">6 slide</option>
+                          <option :value="8">8 slide</option>
+                          <option :value="10">10 slide</option>
+                          <option :value="12">12 slide</option>
+                          <option :value="16">16 slide</option>
+                        </select>
+                      </div>
+                      <div class="text-[10px] text-emerald-100 mt-0.5">Dạng tĩnh chuẩn 16:9</div>
+                    </div>
+                    <button 
+                      @click="launchModule('slides')"
+                      class="mt-2 text-[11px] font-bold text-white bg-emerald-800/70 hover:bg-emerald-800 py-1 px-2 rounded-lg text-center"
+                    >
+                      Khởi tạo <span x-text="targetSlideCount"></span> slide
+                    </button>
+                  </div>
+
+                  <button 
+                    @click="launchModule('exam')"
+                    class="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs text-left transition-all"
+                  >
+                    <div class="font-bold text-xs">Tạo Đề Thi 7991</div>
+                    <div class="text-[10px] text-indigo-100 mt-0.5">Ma trận & 4 phần thi</div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 1: 'SOẠN KHBD 5512'                               -->
+      <!-- ======================================================== -->
+      <div x-show="activeMode === 'khbd'" class="max-w-5xl mx-auto space-y-6">
+        
+        <!-- Header Toolbar KHBD -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs no-print">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded">
+                Công văn 5512/BGDĐT-GDTrH
+              </span>
+              <span class="text-xs text-slate-500">Giáo viên: <strong x-text="teacherProfile.name"></strong></span>
+            </div>
+            <h1 class="text-base md:text-lg font-bold text-slate-900 mt-1" x-text="'KHBD: ' + metadata.lessonName"></h1>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            {/* Bộ chọn số slide trước khi tạo */}
+            <div class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 p-1.5 rounded-lg shadow-2xs">
+              <span class="text-xs font-bold text-emerald-900 pl-1">Chọn số slide:</span>
+              <select x-model.number="targetSlideCount" class="text-xs font-bold text-emerald-950 bg-white border border-emerald-300 rounded px-2 py-1">
+                <option :value="4">4 slide (Ngắn gọn)</option>
+                <option :value="6">6 slide (Cơ bản)</option>
+                <option :value="8">8 slide (Chuẩn Bộ)</option>
+                <option :value="10">10 slide (Mở rộng)</option>
+                <option :value="12">12 slide (Chuyên sâu)</option>
+                <option :value="16">16 slide (Toàn diện)</option>
+              </select>
+              <button 
+                @click="convertKHBDToSlides(targetSlideCount)" 
+                class="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-xs flex items-center gap-1.5 transition-all"
+              >
+                <span>Tạo <span x-text="targetSlideCount"></span> Slide Tĩnh</span>
+              </button>
+            </div>
+
+            <button 
+              @click="downloadKHBDWord()" 
+              class="px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors"
+            >
+              <span>Tải File Word (.doc)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Khung Văn Bản KHBD 5512 -->
+        <div id="khbd-print-area" class="bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-slate-200 space-y-8">
+          <div class="flex justify-between items-start border-b border-slate-200 pb-5">
+            <div>
+              <p class="font-bold text-sm uppercase text-slate-800" x-text="teacherProfile.school"></p>
+              <p class="text-xs text-slate-500 uppercase font-semibold" x-text="teacherProfile.department"></p>
+              <p class="text-xs text-slate-600 mt-1">Giáo viên: <strong x-text="teacherProfile.name"></strong></p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs font-bold text-slate-800 uppercase">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+              <p class="text-xs text-slate-600 italic">Độc lập - Tự do - Hạnh phúc</p>
+              <p class="text-xs text-slate-500 mt-1" x-text="'Năm học: ' + teacherProfile.academicYear"></p>
+            </div>
+          </div>
+
+          <div class="text-center py-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded">
+              KẾ HOẠCH BÀI DẠY (CÔNG VĂN 5512/BGDĐT-GDTrH)
+            </span>
+            <h1 class="text-2xl font-bold uppercase text-slate-900 mt-2" x-text="metadata.lessonName"></h1>
+            <p class="text-xs text-slate-600 mt-1" x-text="'Môn: ' + metadata.subject + ' · ' + metadata.grade + ' · Bộ sách: ' + metadata.curriculum"></p>
+          </div>
+
+          <!-- BẢNG TIẾN TRÌNH 4 HOẠT ĐỘNG (INLINE EDITABLE) -->
+          <section class="space-y-6 pt-4 border-t border-slate-200">
+            <div class="flex justify-between items-center">
+              <h3 class="text-base font-bold text-slate-900 border-l-4 border-blue-600 pl-3">
+                TIẾN TRÌNH DẠY HỌC (4 HOẠT ĐỘNG CHUẨN CÔNG VĂN 5512)
+              </h3>
+              <span class="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold">
+                Chỉnh sửa trực tiếp (Inline Editable)
+              </span>
+            </div>
+
+            <div class="space-y-6">
+              <template x-for="(act, index) in khbdActivities" :key="act.id">
+                <div class="p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-xs">
+                  <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center" x-text="index + 1"></span>
+                      <input 
+                        type="text" 
+                        x-model="act.title"
+                        class="text-sm font-bold text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 focus:outline-none px-1 py-0.5 w-80 md:w-96"
+                      />
+                    </div>
+                    <span class="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded" x-text="act.duration"></span>
+                  </div>
+
+                  <div>
+                    <label class="font-bold text-xs text-slate-900 block mb-1">a) Mục tiêu:</label>
+                    <textarea x-model="act.goal" rows="2" class="w-full text-xs text-slate-700 p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white leading-relaxed"></textarea>
+                  </div>
+
+                  <div>
+                    <label class="font-bold text-xs text-slate-900 block mb-1">b) Nội dung nhiệm vụ:</label>
+                    <textarea x-model="act.content" rows="2" class="w-full text-xs text-slate-700 p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white leading-relaxed"></textarea>
+                  </div>
+
+                  <div>
+                    <label class="font-bold text-xs text-slate-900 block mb-1">c) Sản phẩm học tập:</label>
+                    <textarea x-model="act.product" rows="2" class="w-full text-xs text-slate-700 p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white leading-relaxed"></textarea>
+                  </div>
+
+                  <div class="pt-2">
+                    <label class="font-bold text-xs text-slate-900 block mb-2">
+                      d) Tổ chức thực hiện (Đúng 4 bước chuẩn Công văn 5512):
+                    </label>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                        <strong class="text-blue-900 font-semibold text-xs block">Bước 1: Chuyển giao nhiệm vụ học tập</strong>
+                        <textarea x-model="act.step1_assign" rows="3" class="w-full text-xs text-slate-700 p-2 bg-white border border-slate-200 rounded"></textarea>
+                      </div>
+
+                      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                        <strong class="text-blue-900 font-semibold text-xs block">Bước 2: Thực hiện nhiệm vụ học tập</strong>
+                        <textarea x-model="act.step2_execute" rows="3" class="w-full text-xs text-slate-700 p-2 bg-white border border-slate-200 rounded"></textarea>
+                      </div>
+
+                      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                        <strong class="text-blue-900 font-semibold text-xs block">Bước 3: Báo cáo kết quả và thảo luận</strong>
+                        <textarea x-model="act.step3_report" rows="3" class="w-full text-xs text-slate-700 p-2 bg-white border border-slate-200 rounded"></textarea>
+                      </div>
+
+                      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                        <strong class="text-blue-900 font-semibold text-xs block">Bước 4: Kết luận, nhận định và đánh giá</strong>
+                        <textarea x-model="act.step4_conclude" rows="3" class="w-full text-xs text-slate-700 p-2 bg-white border border-slate-200 rounded"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 2: 'TRÌNH CHIẾU SLIDE BÀI GIẢNG 16:9'             -->
+      <!-- ======================================================== -->
+      <div x-show="activeMode === 'slides'" class="max-w-6xl mx-auto space-y-5">
+        
+        {/* Top Control Bar with Slide Count Selector & Prominent Download */}
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs no-print">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-bold text-emerald-800 uppercase bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                Slide Tĩnh Chuẩn 16:9
+              </span>
+              <span class="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                <span x-text="slides.length"></span> slide tĩnh
+              </span>
+              <span class="text-xs text-slate-500">
+                Giáo viên: <strong class="text-slate-800" x-text="teacherProfile.name"></strong>
+              </span>
+            </div>
+            <h2 class="text-base font-bold text-slate-900 mt-1" x-text="metadata.lessonName + ' (BÀI GIẢNG ĐIỆN TỬ TĨNH)'"></h2>
+            <p class="text-[11px] text-slate-500 mt-0.5">
+              100% nội dung hiển thị tĩnh trên slide, không hiệu ứng ẩn - Mở file PPTX đảm bảo trọn vẹn văn bản.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            {/* 1. Bộ chọn số slide cần tạo */}
+            <div class="flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-300">
+              <span class="text-xs font-bold text-slate-700 whitespace-nowrap pl-1">Số slide:</span>
+              <select 
+                x-model.number="targetSlideCount" 
+                class="text-xs font-bold text-blue-900 bg-white border border-slate-300 rounded px-2 py-1.5 cursor-pointer"
+              >
+                <option :value="4">4 Slide (Ngắn gọn - 4 hoạt động 5512)</option>
+                <option :value="6">6 Slide (Cơ bản - chuẩn mực)</option>
+                <option :value="8">8 Slide (Chuẩn Bộ GD&ĐT - Khuyến nghị)</option>
+                <option :value="10">10 Slide (Mở rộng - kèm ví dụ mẫu)</option>
+                <option :value="12">12 Slide (Chuyên sâu - phân hóa)</option>
+                <option :value="16">16 Slide (Toàn diện - đầy đủ bài tập)</option>
+              </select>
+              <button 
+                @click="convertKHBDToSlides(targetSlideCount)" 
+                class="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow-xs transition-colors whitespace-nowrap"
+                title="Tạo lại bộ slide tĩnh theo số lượng đã chọn"
+              >
+                <span>Tạo <span x-text="targetSlideCount"></span> Slide</span>
+              </button>
+            </div>
+
+            {/* 2. Chế độ xem: Trình chiếu hoặc Dàn trang tĩnh */}
+            <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+              <button 
+                @click="slideViewMode = 'single'"
+                :class="slideViewMode === 'single' ? 'bg-white text-blue-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium'"
+                class="px-2.5 py-1 rounded transition-all"
+              >
+                Trình Chiếu
+              </button>
+              <button 
+                @click="slideViewMode = 'grid'"
+                :class="slideViewMode === 'grid' ? 'bg-white text-blue-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium'"
+                class="px-2.5 py-1 rounded transition-all"
+              >
+                Dàn Trang Tĩnh
+              </button>
+            </div>
+
+            {/* 3. NÚT DOWNLOAD SLIDE VỀ MÁY (Yêu cầu trọng tâm của người dùng) */}
+            <div class="flex items-center gap-1.5">
+              <button 
+                @click="downloadSlidesPPTX()" 
+                class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm flex items-center gap-1.5 transition-all transform hover:-translate-y-0.5"
+                title="Tải tệp Microsoft PowerPoint (.pptx) định dạng 16:9 tĩnh 100%"
+              >
+                <span>📥 Tải File PowerPoint (.pptx)</span>
+              </button>
+
+              <button 
+                @click="downloadSlidesHtml()" 
+                class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition-colors"
+                title="Tải tệp HTML tĩnh độc lập để mở mọi máy tính không cần Office"
+              >
+                <span>HTML Tĩnh</span>
+              </button>
+
+              <button 
+                @click="downloadSlidesWord()" 
+                class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition-colors"
+                title="Tải đề cương tóm tắt dạng Word (.doc)"
+              >
+                <span>Word (.doc)</span>
+              </button>
+
+              <button 
+                @click="toggleFullscreenPresentation()" 
+                class="p-2 text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition-colors"
+                title="Chế độ toàn màn hình"
+              >
+                <span>⛶</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        {/* THÔNG BÁO XUẤT */}
+        <div x-show="slideNotice" class="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in" style="display: none;">
+          <span class="text-emerald-600 font-bold">✓</span>
+          <span x-text="slideNotice"></span>
+        </div>
+
+        {/* ======================================================== */}
+        {/* GIAO DIỆN 1: CHẾ ĐỘ TRÌNH CHIẾU TỪNG SLIDE 16:9          */}
+        {/* ======================================================== */}
+        <div x-show="slideViewMode === 'single'" class="space-y-4">
+          
+          <!-- Khung Slide 16:9 Canvas Tĩnh -->
+          <div id="slide-deck-container" class="w-full flex justify-center">
+            <div 
+              class="w-full max-w-5xl aspect-[16/9] min-h-[520px] relative rounded-2xl shadow-xl border border-slate-300 flex flex-col justify-between overflow-hidden"
+              :class="slideCurrentIdx === 0 ? 'bg-slate-950 text-white border-slate-800' : 'bg-white text-slate-900'"
+            >
+              {/* SLIDE BÌA (Cover Slide: Index 0) */}
+              <template x-if="slideCurrentIdx === 0">
+                <div class="p-8 md:p-12 text-white flex flex-col justify-between h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
+                  <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <span class="px-3 py-1 rounded bg-blue-500/20 text-blue-300 font-bold text-xs uppercase tracking-wider border border-blue-400/30" x-text="currentSlide().stageLabel"></span>
+                    <span class="text-xs text-slate-400 font-mono" x-text="'Slide 1 / ' + slides.length + ' (Dạng tĩnh)'"></span>
+                  </div>
+
+                  <div class="space-y-4 my-auto">
+                    <div>
+                      <h1 class="text-2xl md:text-4xl font-black tracking-tight text-white uppercase leading-tight" x-text="currentSlide().title"></h1>
+                      <p class="text-sm md:text-base text-blue-200 mt-2 font-medium" x-text="currentSlide().subtitle"></p>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-xl space-y-2 text-xs md:text-sm text-slate-200">
+                      <span class="font-bold text-blue-300 block uppercase tracking-wide">Mục Tiêu & Yêu Cầu Cần Đạt (Tĩnh):</span>
+                      <ul class="space-y-1.5 pl-4">
+                        <template x-for="(point, i) in currentSlide().bullets" :key="i">
+                          <li class="list-disc leading-relaxed" x-text="point"></li>
+                        </template>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div class="pt-4 border-t border-slate-700 flex items-center justify-between text-xs text-slate-400">
+                    <div class="flex items-center gap-3">
+                      <span>Giáo viên: <strong class="text-slate-200" x-text="teacherProfile.name"></strong></span>
+                      <span>·</span>
+                      <span x-text="teacherProfile.school"></span>
+                      <span>·</span>
+                      <span x-text="teacherProfile.department"></span>
+                    </div>
+                    <span class="font-mono text-slate-400" x-text="'Năm học: ' + teacherProfile.academicYear"></span>
+                  </div>
+                </div>
+              </template>
+
+              {/* CÁC SLIDE NỘI DUNG TĨNH (Index > 0) */}
+              <template x-if="slideCurrentIdx > 0">
+                <div class="p-6 md:p-8 flex flex-col justify-between h-full bg-slate-50/50">
+                  
+                  {/* Top Ribbon */}
+                  <div class="flex items-center justify-between pb-3 border-b border-slate-200 bg-white -mx-6 -mt-6 md:-mx-8 md:-mt-8 px-6 md:px-8 py-3.5 shadow-2xs">
+                    <div class="flex items-center gap-3">
+                      <span class="px-3 py-1 rounded bg-blue-100 text-blue-900 font-bold text-xs uppercase border border-blue-200" x-text="currentSlide().stageLabel"></span>
+                      <h3 class="font-bold text-sm md:text-base text-slate-900 truncate max-w-xl" x-text="currentSlide().title"></h3>
+                    </div>
+                    <span class="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded" x-text="(slideCurrentIdx + 1) + ' / ' + slides.length"></span>
+                  </div>
+
+                  {/* Body: 2 Columns Static Canvas */}
+                  <div class="grid grid-cols-1 md:grid-cols-12 gap-5 my-auto pt-3">
+                    {/* Cột 1: Kiến thức & Nhiệm vụ */}
+                    <div class="md:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+                      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <span class="text-xs font-bold uppercase tracking-wide text-blue-900">Kiến Thức Cốt Lõi & Nhiệm Vụ (Tĩnh)</span>
+                        <span class="text-[11px] text-slate-400 font-mono">Bản trình chiếu</span>
+                      </div>
+                      <p class="text-xs text-slate-600 italic" x-show="currentSlide().subtitle" x-text="currentSlide().subtitle"></p>
+                      <ul class="space-y-2.5 text-xs md:text-sm text-slate-800">
+                        <template x-for="(point, i) in currentSlide().bullets" :key="i">
+                          <li class="flex items-start gap-2.5 leading-relaxed">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 shrink-0"></span>
+                            <span x-text="point"></span>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+
+                    {/* Cột 2: Công thức, Định lý & Ghi chú */}
+                    <div class="md:col-span-5 space-y-3 flex flex-col justify-between">
+                      <template x-if="currentSlide().formula">
+                        <div class="bg-slate-900 text-emerald-400 p-4 rounded-xl border border-slate-800 shadow-inner text-center font-mono font-bold text-xs md:text-sm leading-relaxed">
+                          <span class="text-[10px] text-slate-400 block mb-1 font-sans uppercase">Công Thức Trọng Tâm</span>
+                          <span x-text="currentSlide().formula"></span>
+                        </div>
+                      </template>
+
+                      <template x-if="currentSlide().calloutBox">
+                        <div class="bg-emerald-50/80 border border-emerald-200 p-4 rounded-xl space-y-1.5 text-xs text-emerald-950 flex-1">
+                          <strong class="text-emerald-900 block font-bold text-xs uppercase tracking-wide" x-text="currentSlide().calloutBox.title"></strong>
+                          <p class="leading-relaxed whitespace-pre-line text-slate-700" x-text="currentSlide().calloutBox.text"></p>
+                        </div>
+                      </template>
+
+                      <template x-if="currentSlide().speakerNotes">
+                        <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-[11px] text-blue-900 leading-snug">
+                          <strong>Ghi chú sư phạm:</strong> <span x-text="currentSlide().speakerNotes"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+
+                  {/* Static Footer */}
+                  <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 bg-white -mx-6 -mb-6 md:-mx-8 md:-mb-8 px-6 md:px-8 py-2.5">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-slate-800" x-text="metadata.lessonName"></span>
+                      <span>·</span>
+                      <span>GV: <strong class="text-blue-700" x-text="teacherProfile.name"></strong></span>
+                      <span>·</span>
+                      <span x-text="teacherProfile.school"></span>
+                    </div>
+                    <span class="font-mono text-xs" x-text="'Trang ' + (slideCurrentIdx + 1)"></span>
+                  </div>
+
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Thanh điều hướng Slide -->
+          <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-xs no-print">
+            <button @click="activeMode = 'khbd'" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50">
+              ← Quay Lại KHBD 5512
+            </button>
+
+            <div class="flex items-center gap-2">
+              <button 
+                @click="slideCurrentIdx = Math.max(0, slideCurrentIdx - 1)" 
+                :disabled="slideCurrentIdx === 0" 
+                class="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-lg text-white font-bold text-xs transition-colors"
+              >
+                ◀ Trước
+              </button>
+
+              <span class="font-mono text-xs font-bold text-slate-800 px-3 py-1 bg-slate-100 rounded-lg" x-text="(slideCurrentIdx + 1) + ' / ' + slides.length"></span>
+
+              <button 
+                @click="slideCurrentIdx = Math.min(slides.length - 1, slideCurrentIdx + 1)" 
+                :disabled="slideCurrentIdx === slides.length - 1" 
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-30 rounded-lg text-white font-bold text-xs transition-colors shadow-xs"
+              >
+                Tiếp ▶
+              </button>
+            </div>
+          </div>
+
+          <!-- Danh sách Thumbnail slide -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2 no-print">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-800 uppercase">
+                Danh Sách <span x-text="slides.length"></span> Slide Tĩnh:
+              </span>
+              <span class="text-[11px] text-slate-500">Bấm từng slide để chuyển nhanh</span>
+            </div>
+            <div class="flex gap-2.5 overflow-x-auto pb-1">
+              <template x-for="(s, idx) in slides" :key="idx">
+                <div 
+                  @click="slideCurrentIdx = idx"
+                  :class="idx === slideCurrentIdx ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'"
+                  class="p-2.5 rounded-lg border text-left cursor-pointer transition-all shrink-0 w-44"
+                >
+                  <div class="flex justify-between items-center text-[10px] mb-1">
+                    <span class="font-mono font-bold text-blue-700" x-text="'#' + (idx + 1)"></span>
+                    <span class="px-1.5 py-0.2 rounded bg-white text-slate-700 font-semibold uppercase text-[9px] border truncate max-w-[100px]" x-text="s.stageLabel"></span>
+                  </div>
+                  <p class="text-xs font-semibold text-slate-900 truncate" x-text="s.title"></p>
+                </div>
+              </template>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ======================================================== */}
+        {/* GIAO DIỆN 2: CHẾ ĐỘ DÀN TRANG TOÀN BỘ SLIDE TĨNH (GRID)  */}
+        {/* ======================================================== */}
+        <div x-show="slideViewMode === 'grid'" class="space-y-6" style="display: none;">
+          <div class="flex items-center justify-between bg-blue-50 border border-blue-200 p-3 rounded-xl text-xs text-blue-900">
+            <span>
+              Đang hiển thị toàn bộ <strong><span x-text="slides.length"></span> slide tĩnh</strong>. Toàn bộ nội dung hiển thị hoàn chỉnh, không giấu nội dung.
+            </span>
+            <button @click="downloadSlidesPPTX()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shrink-0 flex items-center gap-1 shadow-2xs">
+              <span>📥 Tải PPTX Ngay</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <template x-for="(s, idx) in slides" :key="idx">
+              <div 
+                class="bg-white rounded-xl border border-slate-300 shadow-sm p-5 flex flex-col justify-between space-y-4"
+                :class="idx === 0 ? 'bg-slate-950 text-white border-slate-800' : 'bg-white text-slate-900'"
+              >
+                <div class="flex items-center justify-between pb-2 border-b" :class="idx === 0 ? 'border-slate-700' : 'border-slate-200'">
+                  <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase" :class="idx === 0 ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-900'" x-text="s.stageLabel"></span>
+                  <span class="font-mono text-xs font-bold opacity-70" x-text="'Slide ' + (idx + 1) + ' / ' + slides.length"></span>
+                </div>
+
+                <div class="space-y-3">
+                  <h4 class="font-bold text-sm leading-snug" x-text="s.title"></h4>
+                  <p class="text-xs italic" :class="idx === 0 ? 'text-slate-300' : 'text-slate-500'" x-show="s.subtitle" x-text="s.subtitle"></p>
+                  <ul class="space-y-1.5 text-xs">
+                    <template x-for="(point, i) in s.bullets" :key="i">
+                      <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" :class="idx === 0 ? 'bg-blue-400' : 'bg-blue-600'"></span>
+                        <span class="leading-relaxed" x-text="point"></span>
+                      </li>
+                    </template>
+                  </ul>
+
+                  <template x-if="s.formula">
+                    <div class="bg-slate-900 text-emerald-400 p-2.5 rounded-lg text-center font-mono text-xs font-bold border border-slate-800" x-text="s.formula"></div>
+                  </template>
+
+                  <template x-if="s.calloutBox">
+                    <div class="p-2.5 rounded-lg border text-xs leading-relaxed" :class="idx === 0 ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-emerald-50 border-emerald-200 text-emerald-950'">
+                      <strong class="block text-[11px] uppercase mb-0.5" x-text="s.calloutBox.title"></strong>
+                      <p x-text="s.calloutBox.text"></p>
+                    </div>
+                  </template>
+                </div>
+
+                <div class="pt-2 border-t text-[11px] flex justify-between items-center" :class="idx === 0 ? 'border-slate-700 text-slate-400' : 'border-slate-200 text-slate-500'">
+                  <span x-text="teacherProfile.name + ' · ' + teacherProfile.school"></span>
+                  <span class="font-mono" x-text="'Trang ' + (idx + 1)"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 3: 'NGÂN HÀNG ĐỀ THI 7991'                       -->
+      <!-- ======================================================== -->
+      <div x-show="activeMode === 'exam'" class="max-w-7xl mx-auto space-y-6">
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div>
+            <span class="text-xs font-bold text-indigo-700 uppercase bg-indigo-50 px-2 py-0.5 rounded">Công văn 7991</span>
+            <h1 class="text-base font-bold text-slate-900 mt-1">Đề Kiểm Tra Định Kì Chuẩn 4 Phần (10.0đ)</h1>
+          </div>
+          <button @click="downloadExamWord()" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg">Tải file Word chuẩn Bộ GD&ĐT</button>
+        </div>
+
+        <div id="live-document-print-area" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+          <div class="flex justify-between items-start border-b pb-4">
+            <div>
+              <p class="font-bold text-xs uppercase" x-text="teacherProfile.school"></p>
+              <p class="text-xs text-slate-500">Giáo viên ra đề: <strong x-text="teacherProfile.name"></strong></p>
+            </div>
+            <div class="text-right">
+              <h2 class="font-bold text-sm uppercase" x-text="'ĐỀ KIỂM TRA ĐỊNH KÌ - ' + metadata.subject"></h2>
+              <p class="text-xs text-slate-500" x-text="'Khối: ' + metadata.grade + ' · Thời gian: 45 phút'"></p>
+            </div>
+          </div>
+
+          <!-- Phần II Đúng/Sai 4 ý -->
+          <section class="space-y-3">
+            <h3 class="font-bold text-sm text-blue-900 uppercase">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (2,0 ĐIỂM)</h3>
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+              <p class="font-semibold text-xs">Câu 1 (1,0 điểm): Cho hàm số bậc hai y = x² - 2x - 3. Xét tính Đúng/Sai:</p>
+              <div class="space-y-2 text-xs">
+                <div class="p-2.5 bg-white rounded border flex justify-between">
+                  <span>a) Tọa độ đỉnh của parabol là I(1; -4).</span>
+                  <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">ĐÚNG</span>
+                </div>
+                <div class="p-2.5 bg-white rounded border flex justify-between">
+                  <span>b) Trục đối xứng là đường thẳng y = 1.</span>
+                  <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">SAI</span>
+                </div>
+                <div class="p-2.5 bg-white rounded border flex justify-between">
+                  <span>c) Hàm số đồng biến trên khoảng (1; +∞).</span>
+                  <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">ĐÚNG</span>
+                </div>
+                <div class="p-2.5 bg-white rounded border flex justify-between">
+                  <span>d) Đồ thị cắt Ox tại (-1; 0) và (3; 0).</span>
+                  <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">ĐÚNG</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- MODULE 4: 'CLOUD LƯU TRỮ & XUẤT ĐA ĐỊNH DẠNG'             -->
+      <!-- ======================================================== -->
+      <div x-show="activeMode === 'cloud'" class="max-w-6xl mx-auto space-y-6">
+        <div class="bg-gradient-to-r from-slate-900 to-indigo-900 text-white p-6 rounded-2xl space-y-2">
+          <span class="px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase">Cloud Storage Sync Sẵn Sàng</span>
+          <h2 class="text-xl font-black">Kho Lưu Trữ Đám Mây & Xuất File Đa Định Dạng</h2>
+          <p class="text-xs text-slate-300">Tất cả tài liệu của <strong x-text="teacherProfile.name"></strong> được bảo lưu an toàn.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-5 bg-white rounded-xl border border-slate-200 text-center space-y-3">
+            <h4 class="font-bold text-xs uppercase">1. File Word (.doc)</h4>
+            <p class="text-[11px] text-slate-500">Chuẩn thể thức hành chính & bảng 4 bước.</p>
+            <button @click="downloadKHBDWord()" class="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold">Tải Word KHBD</button>
+          </div>
+
+          <div class="p-5 bg-white rounded-xl border border-slate-200 text-center space-y-3">
+            <h4 class="font-bold text-xs uppercase">2. Bản In / PDF</h4>
+            <p class="text-[11px] text-slate-500">Định dạng A4 tiêu chuẩn có ngắt trang.</p>
+            <button @click="window.print()" class="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold">In Ấn / PDF</button>
+          </div>
+
+          <div class="p-5 bg-white rounded-xl border border-slate-200 text-center space-y-3">
+            <h4 class="font-bold text-xs uppercase">3. Slide PPTX 16:9</h4>
+            <p class="text-[11px] text-slate-500">Tệp trình chiếu 16:9 toàn màn hình.</p>
+            <button @click="activeMode = 'slides'" class="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold">Mở Slide Deck</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL CÀI ĐẶT HỒ SƠ GIÁO VIÊN (HỒ MINH LUÂN) -->
+  <div x-show="showSettingsModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-4 text-xs">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <h3 class="font-bold text-sm text-slate-900">Cài Đặt Hồ Sơ Giáo Viên</h3>
+          <p class="text-slate-500 text-[11px]">Thông tin xuất hiện tự động trên bìa KHBD, Slide và Đề thi</p>
+        </div>
+        <button @click="showSettingsModal = false" class="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="font-bold block mb-1">Họ và Tên Giáo viên:</label>
+          <input type="text" x-model="teacherProfile.name" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold block mb-1">Đơn vị công tác (Trường):</label>
+            <input type="text" x-model="teacherProfile.school" class="w-full p-2.5 border rounded-lg bg-slate-50" />
+          </div>
+          <div>
+            <label class="font-bold block mb-1">Tổ bộ môn:</label>
+            <input type="text" x-model="teacherProfile.department" class="w-full p-2.5 border rounded-lg bg-slate-50" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold block mb-1">Chức danh / Vị trí:</label>
+            <input type="text" x-model="teacherProfile.title" class="w-full p-2.5 border rounded-lg bg-slate-50" />
+          </div>
+          <div>
+            <label class="font-bold block mb-1">Năm học:</label>
+            <input type="text" x-model="teacherProfile.academicYear" class="w-full p-2.5 border rounded-lg bg-slate-50" />
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+        <button @click="showSettingsModal = false" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">Lưu Thông Tin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TẢI SÁCH MỚI -->
+  <div x-show="showUploadDialog" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 text-xs">
+      <div class="flex items-center justify-between pb-2 border-b">
+        <div>
+          <h3 class="font-bold text-sm text-slate-900">Tải Sách Lên & Tự Động Lọc Bài Học</h3>
+          <p class="text-[11px] text-slate-500">Tự động nhận diện Bài số... và Tên bài học chuẩn Kết Nối Tri Thức</p>
+        </div>
+        <button @click="showUploadDialog = false" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="font-bold block mb-1">Tên tài liệu / Sách giáo khoa:</label>
+          <input type="text" x-model="newBookName" placeholder="VD: SGK Toán 10 Tập 2, hoặc Bài 15: Hàm số bậc hai..." class="w-full p-2.5 border rounded-lg bg-slate-50 font-medium" />
+        </div>
+        <div>
+          <label class="font-bold block mb-1">Phân loại học liệu:</label>
+          <select x-model="newBookCat" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+            <option value="sgk">📘 Sách Giáo Khoa (SGK)</option>
+            <option value="sgv">📙 Sách Giáo Viên (SGV)</option>
+            <option value="sbt">📗 Sách Bài Tập (SBT)</option>
+          </select>
+        </div>
+
+        <div class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl space-y-1">
+          <div class="font-bold text-emerald-900 flex items-center gap-1.5">
+            <span>⚡ Tính Năng Tự Động Lọc Bài Học:</span>
+          </div>
+          <p class="text-[11px] text-emerald-800 leading-relaxed">
+            Khi Thầy/Cô bấm "Nạp Vào Hệ Thống", bộ lọc thông minh sẽ tự động bóc tách từng <strong>Bài số ... và Tên bài học</strong> từ tên tệp hoặc mục lục chuẩn sách để sẵn sàng khởi tạo KHBD 5512, Slide 16:9 và Đề thi 7991 ngay.
+          </p>
+        </div>
+
+        <div 
+          x-data="{ isDraggingFile: false }"
+          @dragover.prevent="isDraggingFile = true"
+          @dragleave.prevent="isDraggingFile = false"
+          @drop.prevent="
+            isDraggingFile = false;
+            const file = $event.dataTransfer?.files?.[0];
+            if (file) {
+              newBookName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ');
+            }
+          "
+          @paste="
+            const file = $event.clipboardData?.files?.[0];
+            if (file) {
+              newBookName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ');
+            } else {
+              const text = $event.clipboardData?.getData('text');
+              if (text && text.trim()) newBookName = text.trim().split('\n')[0];
+            }
+          "
+          @click="$refs.htmlFileInput.click()"
+          :class="isDraggingFile ? 'border-blue-600 bg-blue-100 ring-2 ring-blue-400' : 'border-blue-300 hover:border-blue-500 bg-blue-50/40 hover:bg-blue-50/70'"
+          class="p-5 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all space-y-1.5"
+        >
+          <div class="text-blue-600 font-black text-sm">📁 Kéo thả file, Bấm chọn hoặc Nhấn Ctrl+V để Dán</div>
+          <p class="text-[11px] text-slate-500">Hỗ trợ tệp <strong>PDF, DOCX, TXT, EPUB</strong>. Tự động lọc ra Bài số... và Tên bài học</p>
+          <div class="flex items-center justify-center gap-1.5 pt-1 text-[10px] text-slate-600 font-semibold">
+            <span class="px-2 py-0.5 bg-white rounded border border-slate-200">Bấm duyệt file</span>
+            <span>·</span>
+            <span class="px-2 py-0.5 bg-white rounded border border-slate-200">Kéo & Thả file</span>
+            <span>·</span>
+            <span class="px-2 py-0.5 bg-white rounded border border-slate-200">Ctrl+V Paste</span>
+          </div>
+          <input 
+            type="file" 
+            x-ref="htmlFileInput" 
+            @change="
+              if ($event.target.files?.[0]) {
+                newBookName = $event.target.files[0].name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ');
+              }
+            " 
+            class="hidden" 
+            accept=".pdf,.docx,.doc,.txt,.epub" 
+          />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button @click="showUploadDialog = false" class="px-3.5 py-1.5 border rounded-lg font-semibold text-slate-600">Hủy</button>
+        <button @click="uploadBookSubmit()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-xs">Xác Nhận Nạp & Lọc Bài Học</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BÀN GIAO JSON STATE -->
+  <div x-show="showHandoverModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+      <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Bàn Giao Trạng Thái Phiên Làm Việc (JSON State)</h3>
+          <p class="text-xs text-slate-500">Giáo viên: <span x-text="teacherProfile.name"></span> · Sách nguồn đã nạp: <span x-text="uploadedBooks.length"></span></p>
+        </div>
+        <button @click="showHandoverModal = false" class="text-slate-400 hover:text-slate-700 text-lg font-bold px-2 py-1">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 flex-1">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-600">Trạng thái dữ liệu JSON thời gian thực:</span>
+          <button @click="navigator.clipboard.writeText(JSON.stringify(getHandoverState(), null, 2)); alert('Đã sao chép JSON State!');" class="px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold rounded-lg transition-colors">
+            Sao chép JSON
+          </button>
+        </div>
+        <pre class="bg-slate-950 text-emerald-400 p-4 rounded-xl text-xs font-mono max-h-72 overflow-y-auto leading-relaxed border border-slate-800" x-text="JSON.stringify(getHandoverState(), null, 2)"></pre>
+      </div>
+      <div class="p-4 border-t border-slate-200 flex justify-end">
+        <button @click="showHandoverModal = false" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALPINE.JS LOGIC CORE CHO CẢ 3 PHÂN HỆ -->
+  <script>
+    function edtechApp() {
+      return {
+        activeMode: 'library', // Mặc định mở Kho Sách để người dùng chọn sách trước
+        showHandoverModal: false,
+        showSettingsModal: false,
+        showUploadDialog: false,
+        targetSlideCount: 8,
+        slideViewMode: 'single',
+        slideNotice: null,
+        slideCurrentIdx: 0,
+        selectedBookId: 'book-sgk-10',
+        selectedLessonName: 'Bài 15: Hàm số bậc hai và đồ thị',
+        newBookName: '',
+        newBookCat: 'sgk',
+
+        // HỒ SƠ GIÁO VIÊN (Yêu cầu trọng tâm: Hồ Minh Luân)
+        teacherProfile: {
+          name: 'Hồ Minh Luân',
+          title: 'Giáo viên Toán - Tin học',
+          school: 'TRƯỜNG THPT CHUYÊN NGUYỄN HUỆ',
+          department: 'TỔ TOÁN - TIN HỌC',
+          email: 'H.Minhluan1181@gmail.com',
+          academicYear: '2024 - 2025'
+        },
+
+        options: {
+          subjects: [
+            // Các môn học cấp THCS theo GDPT 2018
+            'Khoa học tự nhiên',
+            'Lịch sử & Địa lí',
+            'Công nghệ',
+            'Giáo dục công dân',
+            'Tin học',
+            'Toán học',
+            'Ngữ văn',
+            'Tiếng Anh',
+            'Giáo dục thể chất',
+            'Nghệ thuật (Âm nhạc, Mĩ thuật)',
+            'Hoạt động trải nghiệm, hướng nghiệp',
+            'Giáo dục địa phương',
+            // Phân môn cấp THPT
+            'Vật lí',
+            'Hoá học',
+            'Sinh học',
+            'Lịch sử',
+            'Địa lí',
+            'Giáo dục kinh tế và pháp luật'
+          ],
+          grades: ['Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12']
+        },
+
+        metadata: {
+          subject: 'Toán học',
+          grade: 'Lớp 10',
+          curriculum: 'Kết Nối Tri Thức',
+          lessonName: 'BÀI 15: HÀM SỐ BẬC HAI VÀ ĐỒ THỊ',
+        },
+
+        // KHO SÁCH (SGK, SGV, SBT ĐỦ CẢ THCS & THPT)
+        uploadedBooks: [
+          {
+            id: 'book-sgk-khtn-6',
+            name: 'SGK Khoa học tự nhiên 6 (Kết Nối Tri Thức)',
+            category: 'sgk',
+            subject: 'Khoa học tự nhiên',
+            grade: 'Lớp 6',
+            curriculum: 'Kết Nối Tri Thức',
+            fileSize: '19.4 MB',
+            pageCount: 204,
+            chapters: [
+              { id: 'khtn1', chapterTitle: 'Chương 1: Mở đầu', lessonNumber: '1', lessonName: 'Mở đầu về Khoa học tự nhiên', summary: 'Khái niệm KHTN, các lĩnh vực chủ yếu và phương pháp nghiên cứu tự nhiên.' },
+              { id: 'khtn4', chapterTitle: 'Chương 2: Các phép đo', lessonNumber: '4', lessonName: 'Đo chiều dài', summary: 'Đơn vị đo chiều dài (m), giới hạn đo (GHĐ), độ chia nhỏ nhất (ĐCNN) và thao tác đo.' },
+              { id: 'khtn12', chapterTitle: 'Chương 5: Tế bào', lessonNumber: '12', lessonName: 'Tế bào – Đơn vị cơ sở của sự sống', summary: 'Khái niệm tế bào, hình dạng, kích thước hiển vi và cấu tạo màng, nhân, tế bào chất.' },
+              { id: 'khtn18', chapterTitle: 'Chương 8: Lực', lessonNumber: '18', lessonName: 'Lực và tác dụng của lực', summary: 'Khái niệm lực là tác dụng đẩy hoặc kéo, tác dụng làm biến đổi chuyển động.' }
+            ]
+          },
+          {
+            id: 'book-sgk-lsdl-6',
+            name: 'SGK Lịch sử và Địa lí 6 (Kết Nối Tri Thức)',
+            category: 'sgk',
+            subject: 'Lịch sử & Địa lí',
+            grade: 'Lớp 6',
+            curriculum: 'Kết Nối Tri Thức',
+            fileSize: '17.8 MB',
+            pageCount: 188,
+            chapters: [
+              { id: 'ls1', chapterTitle: 'Chương 1: Lịch sử', lessonNumber: '1', lessonName: 'Lịch sử và cuộc sống', summary: 'Khái niệm lịch sử, các nguồn tư liệu hiện vật, chữ viết và truyền miệng.' },
+              { id: 'ls14', chapterTitle: 'Chương 4: Đông Nam Á', lessonNumber: '14', lessonName: 'Nhà nước Văn Lang, Âu Lạc', summary: 'Sự ra đời của nhà nước Văn Lang thời các vua Hùng và cư dân Đông Sơn.' }
+            ]
+          },
+          {
+            id: 'book-sgk-cn-6',
+            name: 'SGK Công nghệ 6 (Kết Nối Tri Thức)',
+            category: 'sgk',
+            subject: 'Công nghệ',
+            grade: 'Lớp 6',
+            curriculum: 'Kết Nối Tri Thức',
+            fileSize: '15.2 MB',
+            pageCount: 120,
+            chapters: [
+              { id: 'cn1', chapterTitle: 'Chương 1: Nhà ở', lessonNumber: '1', lessonName: 'Khái quát về nhà ở', summary: 'Cấu tạo chung và kiến trúc nhà ở đặc trưng của Việt Nam.' },
+              { id: 'cn3', chapterTitle: 'Chương 1: Nhà ở', lessonNumber: '3', lessonName: 'Ngôi nhà thông minh', summary: 'Hệ thống cảm ứng chiếu sáng, camera an ninh và chuông báo động thông minh.' }
+            ]
+          },
+          {
+            id: 'book-sgk-gdcd-6',
+            name: 'SGK Giáo dục công dân 6 (Kết Nối Tri Thức)',
+            category: 'sgk',
+            subject: 'Giáo dục công dân',
+            grade: 'Lớp 6',
+            curriculum: 'Kết Nối Tri Thức',
+            fileSize: '13.6 MB',
+            pageCount: 110,
+            chapters: [
+              { id: 'gdcd1', chapterTitle: 'Chủ đề: Truyền thống', lessonNumber: '1', lessonName: 'Tự hào về truyền thống gia đình, dòng họ', summary: 'Kế thừa và phát huy truyền thống hiếu học, cần cù lao động.' },
+              { id: 'gdcd7', chapterTitle: 'Chủ đề: Kĩ năng sống', lessonNumber: '7', lessonName: 'Ứng phó với các tình huống nguy hiểm', summary: 'Cách thoát hiểm khỏi hỏa hoạn, lũ quét và các số điện thoại khẩn cấp 111, 113, 114, 115.' }
+            ]
+          },
+          {
+            id: 'book-sgk-10',
+            name: 'SGK Toán 10 - Tập 2 (Kết Nối Tri Thức)',
+            category: 'sgk',
+            subject: 'Toán học',
+            grade: 'Lớp 10',
+            curriculum: 'Kết Nối Tri Thức',
+            fileSize: '14.8 MB',
+            pageCount: 136,
+            chapters: [
+              { id: 'ch15', chapterTitle: 'Chương VI: Hàm số và Đồ thị', lessonNumber: '15', lessonName: 'Hàm số bậc hai và đồ thị', summary: 'Khái niệm hàm số bậc hai, tọa độ đỉnh I(-b/2a; -Δ/4a), trục đối xứng x = -b/2a và bảng biến thiên.' },
+              { id: 'ch16', chapterTitle: 'Chương VI: Hàm số và Đồ thị', lessonNumber: '16', lessonName: 'Dấu của tam thức bậc hai', summary: 'Định lý dấu tam thức bậc hai và giải bất phương trình bậc hai một ẩn.' }
+            ]
+          },
+          {
+            id: 'book-sgv-10',
+            name: 'SGV Toán 10 (Sách Giáo Viên Hướng Dẫn)',
+            category: 'sgv',
+            subject: 'Toán học',
+            grade: 'Lớp 10',
+            curriculum: 'Kết Nối Tri Thức',
+            fileSize: '18.2 MB',
+            pageCount: 224,
+            chapters: [
+              { id: 'sgv15', chapterTitle: 'Chương VI', lessonNumber: '15', lessonName: 'Gợi ý thiết kế Bài 15 chuẩn 5512', summary: 'Tiến trình 4 hoạt động dạy học, phương pháp giải quyết vấn đề và đánh giá năng lực.' }
+            ]
+          },
+          {
+            id: 'book-sbt-10',
+            name: 'SBT Toán 10 (Sách Bài Tập Phân Hóa)',
+            category: 'sbt',
+            subject: 'Toán học',
+            grade: 'Lớp 10',
+            curriculum: 'Kết Nối Tri Thức',
+            fileSize: '11.5 MB',
+            pageCount: 160,
+            chapters: [
+              { id: 'sbt15', chapterTitle: 'Chương VI', lessonNumber: '15', lessonName: 'Bài tập rèn luyện Bài 15', summary: 'Ngân hàng bài tập 4 mức độ: Nhận biết, Thông hiểu, Vận dụng, Vận dụng cao.' }
+            ]
+          }
+        ],
+
+        currentBook() {
+          return this.uploadedBooks.find(b => b.id === this.selectedBookId) || this.uploadedBooks[0];
+        },
+
+        launchModule(target) {
+          this.metadata.lessonName = this.selectedLessonName.toUpperCase();
+          this.activeMode = target;
+          if (target === 'slides') {
+            this.convertKHBDToSlides();
+          }
+        },
+
+        uploadBookSubmit() {
+          if (!this.newBookName) this.newBookName = 'SGK ' + this.metadata.subject + ' ' + this.metadata.grade + ' (Kết Nối Tri Thức)';
+          
+          // Tự động phân tích Môn học và Lớp từ tên tệp nếu có
+          const cleanName = this.newBookName;
+          if (/khoa học tự nhiên|khtn/i.test(cleanName)) this.metadata.subject = 'Khoa học tự nhiên';
+          else if (/lịch sử.*địa lí|ls&đl|lsdl/i.test(cleanName)) this.metadata.subject = 'Lịch sử & Địa lí';
+          else if (/công nghệ|\bcn\b/i.test(cleanName)) this.metadata.subject = 'Công nghệ';
+          else if (/giáo dục công dân|\bgdcd\b/i.test(cleanName)) this.metadata.subject = 'Giáo dục công dân';
+          else if (/toán|toan/i.test(cleanName)) this.metadata.subject = 'Toán học';
+          else if (/văn|ngữ văn/i.test(cleanName)) this.metadata.subject = 'Ngữ văn';
+          else if (/tin học|\btin\b/i.test(cleanName)) this.metadata.subject = 'Tin học';
+          else if (/tiếng anh|english/i.test(cleanName)) this.metadata.subject = 'Tiếng Anh';
+
+          // Tự động nhận diện lớp THCS
+          if (/lớp\s*6|lop\s*6|\b6th\b/i.test(cleanName)) this.metadata.grade = 'Lớp 6';
+          else if (/lớp\s*7|lop\s*7|\b7th\b/i.test(cleanName)) this.metadata.grade = 'Lớp 7';
+          else if (/lớp\s*8|lop\s*8|\b8th\b/i.test(cleanName)) this.metadata.grade = 'Lớp 8';
+          else if (/lớp\s*9|lop\s*9|\b9th\b/i.test(cleanName)) this.metadata.grade = 'Lớp 9';
+          else if (['Khoa học tự nhiên', 'Lịch sử & Địa lí'].includes(this.metadata.subject) && ['Lớp 10', 'Lớp 11', 'Lớp 12'].includes(this.metadata.grade)) {
+            this.metadata.grade = 'Lớp 6';
+          }
+
+          // Tự động bóc tách Bài số và Tên bài học
+          let lessonNum = '1';
+          let lessonTitle = '';
+          
+          const match = cleanName.match(/(?:Bài|BÀI|Bai|Tiết|Unit)\s*([0-9IVX]+)[:.\-–—\s]?\s*(.*)/i);
+          if (match) {
+            lessonNum = match[1].trim();
+            lessonTitle = match[2]?.replace(/\.(?:pdf|docx|txt)$/i, '').replace(/KNTT|Kết nối tri thức|lớp\s*\d+/gi, '').replace(/^[:.\-–—]\s*/, '').trim();
+          }
+
+          // CSDL ánh xạ chuẩn xác cho các bài học THCS phổ biến
+          const thcsCurriculumMap = {
+            'Khoa học tự nhiên_Lớp 6': {
+              '1': 'Mở đầu về Khoa học tự nhiên',
+              '2': 'Các lĩnh vực chủ yếu của Khoa học tự nhiên',
+              '3': 'Quy định an toàn trong phòng thực hành',
+              '4': 'Đo chiều dài',
+              '5': 'Đo khối lượng',
+              '6': 'Đo thời gian',
+              '7': 'Thang nhiệt độ Celsius. Đo nhiệt độ',
+              '10': 'Không khí và bảo vệ môi trường không khí',
+              '11': 'Oxygen',
+              '16': 'Tế bào – Đơn vị cơ sở của sự sống',
+              '18': 'Sự lớn lên và phân chia của tế bào',
+              '32': 'Lực và tác dụng của lực',
+              '35': 'Lực ma sát'
+            },
+            'Khoa học tự nhiên_Lớp 7': {
+              '1': 'Phương pháp và kĩ năng học tập KHTN',
+              '2': 'Nguyên tử',
+              '4': 'Sơ lược về bảng tuần hoàn các nguyên tố hóa học',
+              '7': 'Tốc độ chuyển động',
+              '10': 'Sóng âm',
+              '14': 'Phản xạ ánh sáng',
+              '19': 'Quang hợp ở thực vật'
+            },
+            'Toán học_Lớp 6': {
+              '1': 'Tập hợp',
+              '6': 'Lũy thừa với số mũ tự nhiên',
+              '10': 'Dấu hiệu chia hết cho 3, cho 9',
+              '11': 'Số nguyên tố',
+              '12': 'Ước chung và Ước chung lớn nhất',
+              '14': 'Tập hợp các số nguyên'
+            },
+            'Ngữ văn_Lớp 6': {
+              '1': 'Bài học đường đời đầu tiên (Tô Hoài)',
+              '2': 'Chuyện cổ tích về loài người (Xuân Quỳnh)',
+              '3': 'Cô bé bán diêm (Andersen)',
+              '4': 'Chùm ca dao về quê hương đất nước'
+            }
+          };
+
+          const key = this.metadata.subject + '_' + this.metadata.grade;
+          if (!lessonTitle && thcsCurriculumMap[key] && thcsCurriculumMap[key][lessonNum]) {
+            lessonTitle = thcsCurriculumMap[key][lessonNum];
+          } else if (!lessonTitle) {
+            if (this.metadata.subject === 'Khoa học tự nhiên') {
+              lessonTitle = lessonNum === '1' ? 'Mở đầu về Khoa học tự nhiên' : ('Chuyên đề Khoa học tự nhiên Bài ' + lessonNum);
+            } else if (this.metadata.subject === 'Toán học') {
+              lessonTitle = lessonNum === '1' ? 'Tập hợp các số tự nhiên' : ('Bài toán trọng tâm số ' + lessonNum);
+            } else if (this.metadata.subject === 'Ngữ văn') {
+              lessonTitle = lessonNum === '1' ? 'Bài học đường đời đầu tiên' : ('Văn bản đọc hiểu Bài ' + lessonNum);
+            } else {
+              lessonTitle = 'Bài học trọng tâm số ' + lessonNum;
+            }
+          }
+
+          const generatedChapters = [
+            {
+              id: 'ch-auto-' + Date.now(),
+              chapterTitle: 'Chương Trọng Tâm (' + this.metadata.subject + ' ' + this.metadata.grade + ')',
+              lessonNumber: lessonNum,
+              lessonName: lessonTitle,
+              summary: 'Toàn bộ nội dung cốt lõi của Bài ' + lessonNum + ': ' + lessonTitle + ' theo chuẩn chương trình GDPT 2018.'
+            },
+            {
+              id: 'ch-auto-next-' + Date.now(),
+              chapterTitle: 'Chương Trọng Tâm (' + this.metadata.subject + ' ' + this.metadata.grade + ')',
+              lessonNumber: String(Number(lessonNum) ? Number(lessonNum) + 1 : '2'),
+              lessonName: 'Luyện tập và Vận dụng kiến thức thực tế',
+              summary: 'Hệ thống bài tập củng cố và câu hỏi trắc nghiệm định dạng đề thi chuẩn 7991.'
+            }
+          ];
+
+          this.uploadedBooks.unshift({
+            id: 'book-' + Date.now(),
+            name: this.newBookName,
+            category: this.newBookCat,
+            subject: this.metadata.subject,
+            grade: this.metadata.grade,
+            curriculum: this.metadata.curriculum,
+            fileSize: '14.2 MB',
+            pageCount: 136,
+            chapters: generatedChapters
+          });
+          this.selectedBookId = this.uploadedBooks[0].id;
+          this.selectedLessonName = 'Bài ' + lessonNum + ': ' + lessonTitle;
+          this.metadata.lessonName = this.selectedLessonName.toUpperCase();
+          this.showUploadDialog = false;
+          this.newBookName = '';
+        },
+
+        // Tiến trình 4 hoạt động KHBD 5512 (INLINE EDITABLE)
+        khbdActivities: [
+          {
+            id: 'act1',
+            title: 'Hoạt động 1: Xác định vấn đề / Khởi động',
+            duration: '10 phút',
+            goal: 'Tạo tâm thế hứng thú, quan sát quỹ đạo quả bóng rổ và vòm cầu Gateway Arch để phát hiện dạng đường cong Parabol.',
+            content: 'Xem clip cú ném 3 điểm bóng rổ và ảnh cổng vòm St. Louis. Trả lời: Điểm chung về hình học của quỹ đạo này là gì?',
+            product: 'Dự đoán của học sinh: Quỹ đạo có dạng đường cong uốn vòng xuống dưới, đạt độ cao tối đa tại đỉnh.',
+            step1_assign: 'GV chiếu video clip và phát phiếu khởi động: Nêu dạng hình học và yếu tố quyết định độ cao lớn nhất của bóng.',
+            step2_execute: 'Học sinh làm việc theo cặp đôi trong 3 phút, ghi nhận xét nhanh vào phiếu học tập cá nhân.',
+            step3_report: 'Đại diện 2 cặp đôi phát biểu, các bạn khác lắng nghe và nhận xét so sánh với hàm số y = ax² ở THCS.',
+            step4_conclude: 'GV nhận xét và chuẩn hoá: Đây là đồ thị parabol của hàm số bậc hai y = ax² + bx + c (a ≠ 0). Dẫn vào bài mới.'
+          },
+          {
+            id: 'act2',
+            title: 'Hoạt động 2: Hình thành kiến thức mới (Khám phá)',
+            duration: '35 phút',
+            goal: 'Nắm vững định nghĩa hàm số bậc hai; xác định tọa độ đỉnh I(-b/(2a); -Δ/(4a)), trục đối xứng x = -b/(2a) và lập bảng biến thiên.',
+            content: 'Nhiệm vụ 1: Nhận diện hệ số a, b, c. Nhiệm vụ 2: Biến đổi hoàn thành bình phương để tìm tọa độ đỉnh và hướng bề lõm.',
+            product: 'Bảng công thức: Tọa độ đỉnh I, trục đối xứng, bảng biến thiên chuẩn cho 2 trường hợp a > 0 và a < 0.',
+            step1_assign: 'GV chia 4 nhóm chuyên sâu, giao nhiệm vụ biến đổi đại số y = a(x + b/(2a))² - Δ/(4a) và nhận xét cực trị.',
+            step2_execute: 'Các nhóm tính toán, đối chiếu với mô phỏng đồ thị GeoGebra trên máy chiếu khi thay đổi hệ số a.',
+            step3_report: 'Nhóm 1 & 3 báo cáo tọa độ đỉnh và trục đối xứng; Nhóm 2 & 4 đối chiếu chiều quay bề lõm khi a > 0 và a < 0.',
+            step4_conclude: 'GV chốt kiến thức: Định lý về tọa độ đỉnh I(-b/(2a); -Δ/(4a)), trục đối xứng và hướng bề lõm parabol.'
+          },
+          {
+            id: 'act3',
+            title: 'Hoạt động 3: Luyện tập (Củng cố kĩ năng)',
+            duration: '25 phút',
+            goal: 'Rèn luyện kĩ năng xác định tọa độ đỉnh, trục đối xứng và vẽ nhanh đồ thị parabol trên mặt phẳng tọa độ Oxy.',
+            content: 'Khảo sát và vẽ đồ thị parabol (P): y = x² - 4x + 3. Xác định các giao điểm với trục toạ độ.',
+            product: 'Bài làm trong vở: Đỉnh I(2; -1), trục đối xứng x = 2, cắt Oy tại (0; 3), cắt Ox tại (1; 0) và (3; 0). Đồ thị vẽ chuẩn xác.',
+            step1_assign: 'GV giao bài tập luyện tập, yêu cầu học sinh làm độc lập 7 phút rồi đổi chéo vở kiểm tra theo cặp.',
+            step2_execute: 'Học sinh vẽ hệ trục tọa độ Oxy, xác định 5 điểm đặc biệt và nối parabol trơn mượt.',
+            step3_report: '2 học sinh lên bảng trình bày bài làm và vẽ hình. Lớp nhận xét các lỗi sai thường gặp (quên vẽ trục đối xứng).',
+            step4_conclude: 'GV chỉnh sửa, chốt quy trình 5 bước vẽ đồ thị hàm số bậc hai chuẩn mực.'
+          },
+          {
+            id: 'act4',
+            title: 'Hoạt động 4: Vận dụng (Gắn với thực tiễn)',
+            duration: '20 phút',
+            goal: 'Vận dụng hàm số bậc hai để mô hình hóa bài toán thực tế tối ưu hóa diện tích mảnh vườn hình chữ nhật có chu vi cố định.',
+            content: 'Bài toán: Có 40 mét lưới thép rào mảnh vườn hình chữ nhật giáp bờ tường thẳng. Tìm kích thước để diện tích đạt lớn nhất.',
+            product: 'Mô hình hóa: S(x) = x(40 - 2x) = -2x² + 40x. Đỉnh Parabol tại x = 10m, diện tích cực đại S_max = 200 m².',
+            step1_assign: 'GV giao dự án nhỏ: "Kĩ sư nông nghiệp trẻ". Chiếu sơ đồ khu đất giáp tường và yêu cầu lập hàm số diện tích.',
+            step2_execute: 'Học sinh thảo luận nhóm 4, đặt ẩn số chiều rộng là x (m), biểu diễn chiều dài theo x và tìm cực đại.',
+            step3_report: 'Đại diện nhóm 3 thuyết trình cách tìm cực trị thông qua hoành độ đỉnh Parabol x = -b/(2a) = 10m.',
+            step4_conclude: 'GV đánh giá năng lực mô hình hóa của cả lớp; dặn dò bài tập về nhà và ôn tập thi định kì.'
+          }
+        ],
+
+        slides: [],
+
+        currentSlide() {
+          return this.slides[this.slideCurrentIdx] || {
+            stageLabel: 'Mở đầu',
+            title: this.metadata.lessonName,
+            subtitle: 'Chương trình GDPT 2018',
+            bullets: ['Nắm vững kiến thức trọng tâm', 'Rèn luyện năng lực giải quyết vấn đề']
+          };
+        },
+
+        convertKHBDToSlides(count = this.targetSlideCount) {
+          const generated = [];
+          const acts = this.khbdActivities;
+          const teacher = this.teacherProfile;
+          const lesson = this.metadata.lessonName;
+
+          if (count <= 4) {
+            // 4 SLIDES TĨNH (Tối giản đủ 4 hoạt động)
+            generated.push({
+              stageLabel: 'Hoạt Động 1: Khởi Động & Mở Đầu',
+              title: lesson,
+              subtitle: 'Giáo viên: ' + teacher.name + ' · Môn: ' + this.metadata.subject + ' · ' + this.metadata.grade,
+              bullets: [
+                'Mục tiêu bài dạy: ' + acts[0].goal,
+                'Tình huống mở đầu: ' + acts[0].content,
+                'Sản phẩm dự kiến: ' + acts[0].product
+              ],
+              calloutBox: { title: 'CHUYỂN GIAO NHIỆM VỤ', text: acts[0].step1_assign },
+              speakerNotes: 'Ổn định lớp và giao phiếu khởi động cặp đôi.'
+            });
+
+            generated.push({
+              stageLabel: 'Hoạt Động 2: Khám Phá Kiến Thức',
+              title: acts[1].title,
+              subtitle: 'Thời lượng: ' + acts[1].duration + ' · Trọng tâm lý thuyết',
+              bullets: [
+                'Mục tiêu kiến thức: ' + acts[1].goal,
+                'Nhiệm vụ học sinh: ' + acts[1].content,
+                'Sản phẩm cần đạt: ' + acts[1].product,
+                'Tiến trình 4 bước: (1) Chuyển giao → (2) Thực hiện → (3) Báo cáo → (4) Đánh giá.'
+              ],
+              formula: 'y = ax² + bx + c (a ≠ 0) | Đỉnh I(-b/2a; -Δ/4a) | Trục x = -b/2a',
+              calloutBox: { title: 'ĐỊNH LÝ CỐT LÕI', text: 'Bề lõm parabol quay lên khi a > 0; quay xuống khi a < 0.' },
+              speakerNotes: 'Hướng dẫn học sinh biến đổi tọa độ đỉnh.'
+            });
+
+            generated.push({
+              stageLabel: 'Hoạt Động 3: Luyện Tập',
+              title: acts[2].title,
+              subtitle: 'Thời lượng: ' + acts[2].duration + ' · Rèn kĩ năng thực hành',
+              bullets: [
+                'Nhiệm vụ mẫu: ' + acts[2].content,
+                'Bước 1: Hệ số a = 1 > 0, b = -4, c = 3. Tọa độ đỉnh I(2; -1).',
+                'Bước 2: Trục đối xứng x = 2; Giao Oy(0; 3); Giao Ox(1; 0) và (3; 0).',
+                'Sản phẩm học sinh: ' + acts[2].product
+              ],
+              calloutBox: { title: 'QUY TRÌNH THỰC HIỆN', text: 'Làm độc lập 5 phút → Đổi chéo vở kiểm tra cặp đôi → Sửa bài.' },
+              speakerNotes: 'Lưu ý học sinh các lỗi sai thường gặp khi vẽ trục đối xứng.'
+            });
+
+            generated.push({
+              stageLabel: 'Hoạt Động 4: Vận Dụng & Dặn Dò',
+              title: acts[3].title,
+              subtitle: 'Thời lượng: ' + acts[3].duration + ' · Tối ưu hóa đời sống',
+              bullets: [
+                'Bài toán thực tế: ' + acts[3].content,
+                'Mô hình toán học: Hàm số diện tích S(x) = x(40 - 2x) = -2x² + 40x với 0 < x < 20.',
+                'Kết quả: Đạt diện tích lớn nhất S_max = 200 m² khi x = 10m.',
+                'Nhiệm vụ về nhà: Hoàn thành bài tập SGK/SBT và chuẩn bị bài mới.'
+              ],
+              calloutBox: { title: 'THÔNG ĐIỆP SƯ PHẠM', text: 'Giáo viên ' + teacher.name + ' chúc các em học tập tốt!' },
+              speakerNotes: 'Tổng kết đánh giá và giao nhiệm vụ tự học về nhà.'
+            });
+
+          } else if (count <= 6) {
+            // 6 SLIDES TĨNH (1 Bìa + 4 Hoạt động + 1 Tổng kết)
+            generated.push({
+              stageLabel: 'Mở Đầu & Mục Tiêu',
+              title: lesson,
+              subtitle: 'Môn: ' + this.metadata.subject + ' · ' + this.metadata.grade + ' · Sách: ' + this.metadata.curriculum,
+              bullets: [
+                'Nắm vững kiến thức trọng tâm theo chuẩn chương trình GDPT 2018.',
+                'Phát triển năng lực tư duy, lập luận và giải quyết vấn đề toán học.',
+                'Rèn luyện phẩm chất chăm chỉ, trung thực và tinh thần hợp tác nhóm.'
+              ],
+              calloutBox: { title: 'ĐỊNH HƯỚNG BÀI DẠY', text: 'Tiến trình 4 hoạt động bài học chuẩn Công văn 5512/BGDĐT-GDTrH.' },
+              speakerNotes: 'Ổn định lớp và phổ biến mục tiêu bài học.'
+            });
+
+            acts.forEach((act, idx) => {
+              generated.push({
+                stageLabel: idx === 0 ? 'Hoạt Động 1: Khởi Động' : idx === 1 ? 'Hoạt Động 2: Khám Phá' : idx === 2 ? 'Hoạt Động 3: Luyện Tập' : 'Hoạt Động 4: Vận Dụng',
+                title: act.title,
+                subtitle: 'Thời lượng: ' + act.duration + ' · Khung tiến trình chuẩn 5512',
+                bullets: [
+                  'Mục tiêu: ' + act.goal,
+                  'Nội dung nhiệm vụ: ' + act.content,
+                  'Sản phẩm học tập: ' + act.product,
+                  'Tiến trình 4 bước: Chuyển giao → Thực hiện → Báo cáo/Thảo luận → Kết luận.'
+                ],
+                formula: idx === 1 ? 'y = ax² + bx + c (a ≠ 0) ⇒ Đỉnh I(-b/2a; -Δ/4a)' : null,
+                calloutBox: { title: 'TỔ CHỨC THỰC HIỆN TĨNH', text: act.step1_assign.slice(0, 100) + '...' },
+                speakerNotes: 'Tổ chức hoạt động theo đúng 4 bước của Bộ GD&ĐT.'
+              });
+            });
+
+            generated.push({
+              stageLabel: 'Tổng Kết & Dặn Dò',
+              title: 'TỔNG KẾT BÀI HỌC VÀ NHIỆM VỤ VỀ NHÀ',
+              subtitle: 'Củng cố kiến thức ' + lesson,
+              bullets: [
+                'Ghi nhớ các khái niệm cốt lõi, công thức tọa độ đỉnh và trục đối xứng.',
+                'Hoàn thành bài tập trong SGK và Sách Bài Tập.',
+                'Tự đánh giá kết quả theo mức độ Nhận biết, Thông hiểu và Vận dụng.'
+              ],
+              calloutBox: { title: 'HƯỚNG DẪN TỰ HỌC', text: 'Khám phá thêm các ứng dụng parabol trong kiến trúc và kĩ thuật.' },
+              speakerNotes: 'Dặn dò nhiệm vụ về nhà.'
+            });
+
+          } else {
+            // 8, 10, 12, 16 SLIDES TĨNH (Chuẩn Bộ & Phân hóa chuyên sâu)
+            // Slide 1: Bìa
+            generated.push({
+              stageLabel: 'Mở Đầu & Mục Tiêu',
+              title: lesson,
+              subtitle: 'Môn: ' + this.metadata.subject + ' · ' + this.metadata.grade + ' · Sách: ' + this.metadata.curriculum,
+              bullets: [
+                'Mục tiêu kiến thức: Hiểu rõ khái niệm, tính chất và ứng dụng thực tiễn.',
+                'Mục tiêu năng lực: Mô hình hóa toán học, giải quyết vấn đề và tư duy phản biện.',
+                'Mục tiêu phẩm chất: Tự giác học tập, chủ động khám phá tri thức mới.'
+              ],
+              calloutBox: { title: 'CHUẨN ĐẦU RA 5512', text: 'Đáp ứng toàn diện các yêu cầu cần đạt của Thông tư 32/2018/TT-BGDĐT.' },
+              speakerNotes: 'Giới thiệu mục tiêu bài học.'
+            });
+
+            // Slide 2: Khởi động
+            generated.push({
+              stageLabel: 'Hoạt Động 1: Khởi Động',
+              title: acts[0].title,
+              subtitle: 'Thời lượng: ' + acts[0].duration + ' · Kích hoạt tư duy',
+              bullets: [
+                'Mục tiêu: ' + acts[0].goal,
+                'Tình huống mở đầu: ' + acts[0].content,
+                'Sản phẩm dự kiến: ' + acts[0].product
+              ],
+              calloutBox: { title: 'CHUYỂN GIAO NHIỆM VỤ', text: acts[0].step1_assign },
+              speakerNotes: 'Đặt câu hỏi gợi mở cho học sinh.'
+            });
+
+            // Slide 3: Khám phá 1 - Định nghĩa
+            generated.push({
+              stageLabel: 'Hoạt Động 2: Khám Phá Kiến Thức',
+              title: 'ĐỊNH NGHĨA VÀ TÍNH CHẤT CỐT LÕI',
+              subtitle: 'Khảo sát lý thuyết hàm số',
+              bullets: [
+                'Nhiệm vụ: ' + acts[1].content.slice(0, 120),
+                'Khái niệm: Hàm số bậc hai y = ax² + bx + c với a ≠ 0.',
+                'Tính chất: Nhận dạng trục đối xứng và bề lõm đồ thị.',
+                'Sản phẩm: ' + acts[1].product.slice(0, 100)
+              ],
+              formula: 'y = ax² + bx + c (a ≠ 0) | Đỉnh I(-b/2a; -Δ/4a) | Trục x = -b/2a',
+              calloutBox: { title: 'ĐỊNH LÝ TRỌNG TÂM', text: 'Bề lõm quay lên khi a > 0, quay xuống khi a < 0.' },
+              speakerNotes: 'Cho học sinh biến đổi toạ độ đỉnh.'
+            });
+
+            // Slide 4: Khám phá 2 - Bảng biến thiên
+            generated.push({
+              stageLabel: 'Hoạt Động 2: Khám Phá Kiến Thức',
+              title: 'BẢNG BIẾN THIÊN VÀ ĐỒ THỊ PARABOL',
+              subtitle: 'Quy trình 5 bước vẽ đồ thị chuẩn',
+              bullets: [
+                'Bước 1: Xác định tập xác định và tọa độ đỉnh I.',
+                'Bước 2: Vẽ trục đối xứng x = -b/(2a).',
+                'Bước 3: Lập bảng biến thiên theo dấu của hệ số a.',
+                'Bước 4: Xác định 5 điểm đặc biệt trên đồ thị.',
+                'Bước 5: Vẽ đường cong parabol đối xứng trơn mượt.'
+              ],
+              formula: 'a > 0: Nghịch biến (-∞; -b/2a) | Đồng biến (-b/2a; +∞)',
+              calloutBox: { title: 'LƯU Ý SƯ PHẠM', text: 'Học sinh thường quên vẽ trục đối xứng nét đứt.' },
+              speakerNotes: 'Yêu cầu cả lớp thực hành vẽ bảng biến thiên.'
+            });
+
+            // Slide 5: Luyện tập 1 - Ví dụ mẫu
+            generated.push({
+              stageLabel: 'Hoạt Động 3: Luyện Tập',
+              title: 'VÍ DỤ MẪU MINH HỌA & LỜI GIẢI CHI TIẾT',
+              subtitle: 'Rèn luyện kĩ năng chuẩn xác',
+              bullets: [
+                'Bài toán mẫu: ' + acts[2].content,
+                'Lời giải bước 1: a = 1 > 0, b = -4, c = 3. Đỉnh I(2; -1).',
+                'Lời giải bước 2: Trục đối xứng x = 2; Giao Oy(0; 3); Giao Ox(1; 0) và (3; 0).',
+                'Kết luận: Hàm số nghịch biến trên (-∞; 2), đồng biến trên (2; +∞).'
+              ],
+              calloutBox: { title: 'TIÊU CHÍ CHẤM ĐIỂM', text: 'Đỉnh (0.25đ), trục (0.25đ), 5 điểm (0.25đ), nét vẽ trơn (0.25đ).' },
+              speakerNotes: 'Trình bày mẫu trên bảng.'
+            });
+
+            // Slide 6: Luyện tập 2 - Bài tập củng cố
+            generated.push({
+              stageLabel: 'Hoạt Động 3: Luyện Tập',
+              title: 'HỆ THỐNG CÂU HỎI & BÀI TẬP CỦNG CỐ',
+              subtitle: 'Phân hóa theo mức độ Nhận biết - Thông hiểu',
+              bullets: [
+                'Câu 1 (Nhận biết): Tìm toạ độ đỉnh của y = -2x² + 4x + 1 (Đáp án: I(1; 3)).',
+                'Câu 2 (Thông hiểu): Xác định parabol qua A(1; 5) và có trục x = 1.',
+                'Câu 3 (Đúng/Sai): Xét tính đúng sai của khẳng định cực trị.',
+                'Phương pháp giải: Sử dụng hệ phương trình kết hợp tính chất tọa độ đỉnh.'
+              ],
+              calloutBox: { title: 'ĐÁP SỐ CHUẨN', text: 'Câu 1: I(1; 3). Câu 2: y = -x² + 2x + 2.' },
+              speakerNotes: 'Học sinh tự làm 5 phút và chấm chéo.'
+            });
+
+            // Slide 7: Vận dụng thực tế
+            generated.push({
+              stageLabel: 'Hoạt Động 4: Vận Dụng',
+              title: acts[3].title,
+              subtitle: 'Mô hình hóa cực trị Parabol trong đời sống',
+              bullets: [
+                'Nhiệm vụ: ' + acts[3].content,
+                'Mô hình toán học: S(x) = x(40 - 2x) = -2x² + 40x với 0 < x < 20.',
+                'Tìm cực đại: Vì a = -2 < 0, đỉnh Parabol tại x = 10m.',
+                'Kết luận thực tiễn: Diện tích lớn nhất đạt S_max = 200 m² khi x = 10m.'
+              ],
+              calloutBox: { title: 'Ý NGHĨA THỰC TIỄN', text: 'Ứng dụng trong kiến trúc vòm cầu, chao đèn pha và quỹ đạo vệ tinh.' },
+              speakerNotes: 'Khắc sâu năng lực mô hình hoá toán học.'
+            });
+
+            // Các slide mở rộng nếu count > 8
+            const extraCount = Math.max(0, count - 8);
+            for (let k = 1; k <= extraCount; k++) {
+              generated.push({
+                stageLabel: 'Mở Rộng & Chuyên Sâu',
+                title: 'CHUYÊN ĐỀ PHÂN HÓA NÂNG CAO ' + k,
+                subtitle: 'Phát triển tư duy cho học sinh khá giỏi',
+                bullets: [
+                  'Dạng toán: Biện luận số nghiệm của phương trình tương giao parabol với đường thẳng y = m.',
+                  'Phương trình hoành độ giao điểm: ax² + bx + c - m = 0.',
+                  'Biện luận biệt thức: Δ > 0 (2 nghiệm), Δ = 0 (tiếp xúc), Δ < 0 (không giao nhau).',
+                  'Bài toán thực tế kinh tế: Tối ưu hóa hàm lợi nhuận L(x) = Doanh thu - Chi phí.'
+                ],
+                formula: 'ax² + bx + (c - m) = 0 ⇒ Δ = b² - 4a(c - m)',
+                calloutBox: { title: 'CHIẾN THUẬT GIẢI', text: 'Kết hợp đại số và trực quan hóa tương giao hình học.' },
+                speakerNotes: 'Dành cho lớp phân hóa chất lượng cao.'
+              });
+            }
+
+            // Slide Tổng kết
+            generated.push({
+              stageLabel: 'Tổng Kết & Dặn Dò',
+              title: 'TỔNG KẾT BÀI HỌC VÀ HƯỚNG DẪN TỰ HỌC',
+              subtitle: 'Khắc sâu kiến thức trọng tâm',
+              bullets: [
+                '1. Ghi nhớ công thức tọa độ đỉnh I(-b/2a; -Δ/4a) và trục đối xứng.',
+                '2. Nắm vững chiều biến thiên theo dấu của hệ số a.',
+                '3. Làm bài tập 1, 2, 3, 4 trang 67 SGK và bài tập SBT.',
+                '4. Chuẩn bị bài học tiếp theo theo phân phối chương trình.'
+              ],
+              calloutBox: { title: 'THÔNG ĐIỆP SƯ PHẠM', text: 'Giáo viên ' + teacher.name + ' chúc các em học tập hiệu quả!' },
+              speakerNotes: 'Dặn dò thời hạn nộp bài và kết thúc buổi dạy.'
+            });
+          }
+
+          this.slides = generated.slice(0, count);
+          this.slideCurrentIdx = 0;
+          this.activeMode = 'slides';
+        },
+
+        // TẢI FILE MICROSOFT POWERPOINT (.PPTX) TĨNH
+        downloadSlidesPPTX() {
+          const safeName = (this.metadata.lessonName || 'Slide_Bai_Giang')
+            .replace(/[^a-zA-Z0-9\u00C0-\u1EF9]/g, '_')
+            .slice(0, 35);
+
+          if (typeof PptxGenJS !== 'undefined') {
+            try {
+              const pptx = new PptxGenJS();
+              pptx.layout = 'LAYOUT_16x9';
+              pptx.author = this.teacherProfile.name;
+              pptx.company = this.teacherProfile.school;
+              pptx.title = this.metadata.lessonName;
+
+              this.slides.forEach((s, idx) => {
+                const slide = pptx.addSlide();
+                slide.background = { color: idx === 0 ? '0F172A' : 'F8FAFC' };
+
+                if (idx === 0) {
+                  // Slide bìa
+                  slide.addText(s.stageLabel ? s.stageLabel.toUpperCase() : 'BÀI GIẢNG ĐIỆN TỬ TĨNH', {
+                    x: 0.8, y: 0.8, w: 9.0, h: 0.4, fontSize: 12, bold: true, color: '60A5FA', fontFace: 'Arial'
+                  });
+                  slide.addText(s.title, {
+                    x: 0.8, y: 1.4, w: 11.5, h: 1.6, fontSize: 28, bold: true, color: 'FFFFFF', fontFace: 'Arial'
+                  });
+                  if (s.subtitle) {
+                    slide.addText(s.subtitle, {
+                      x: 0.8, y: 3.1, w: 11.5, h: 0.6, fontSize: 14, italic: true, color: '94A3B8', fontFace: 'Arial'
+                    });
+                  }
+                  if (s.bullets && s.bullets.length) {
+                    const bulletsText = s.bullets.map(b => ({
+                      text: `• ${b}\n`,
+                      options: { fontSize: 13, color: 'E2E8F0', fontFace: 'Arial' }
+                    }));
+                    slide.addText(bulletsText, { x: 0.8, y: 3.8, w: 11.5, h: 2.2, valign: 'top' });
+                  }
+                  slide.addText(`Người soạn: ${this.teacherProfile.name} | ${this.teacherProfile.department} | ${this.teacherProfile.school}`, {
+                    x: 0.8, y: 6.5, w: 11.5, h: 0.4, fontSize: 11, bold: true, color: '94A3B8', fontFace: 'Arial'
+                  });
+                } else {
+                  // Slide nội dung tĩnh
+                  slide.addShape('rect', {
+                    x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+                  });
+                  slide.addShape('roundRect', {
+                    x: 0.6, y: 0.22, w: 2.4, h: 0.45, fill: { color: 'EFF6FF' }, line: { color: 'BFDBFE', width: 1 }
+                  });
+                  slide.addText(s.stageLabel ? s.stageLabel.toUpperCase() : 'HOẠT ĐỘNG', {
+                    x: 0.6, y: 0.22, w: 2.4, h: 0.45, fontSize: 10, bold: true, color: '2563EB', fontFace: 'Arial', align: 'center', valign: 'middle'
+                  });
+                  slide.addText(s.title, {
+                    x: 3.2, y: 0.15, w: 8.5, h: 0.6, fontSize: 16, bold: true, color: '0F172A', fontFace: 'Arial', valign: 'middle'
+                  });
+                  slide.addText(`${idx + 1} / ${this.slides.length}`, {
+                    x: 11.8, y: 0.25, w: 1.0, h: 0.4, fontSize: 11, color: '64748B', fontFace: 'Arial', align: 'right'
+                  });
+
+                  const hasSideBox = Boolean(s.calloutBox || s.formula);
+                  const colW = hasSideBox ? 7.2 : 12.1;
+
+                  // Card trái: Nội dung kiến thức
+                  slide.addShape('roundRect', {
+                    x: 0.6, y: 1.4, w: colW, h: 4.9, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1 }
+                  });
+                  slide.addText('KIẾN THỨC VÀ TIẾN TRÌNH THỰC HIỆN TĨNH', {
+                    x: 0.9, y: 1.6, w: colW - 0.6, h: 0.35, fontSize: 11, bold: true, color: '1E3A8A', fontFace: 'Arial'
+                  });
+
+                  if (s.bullets && s.bullets.length) {
+                    const bulletsText = s.bullets.map(b => ({
+                      text: `▪  ${b}\n\n`,
+                      options: { fontSize: 13, color: '0F172A', fontFace: 'Arial' }
+                    }));
+                    slide.addText(bulletsText, { x: 0.9, y: 2.05, w: colW - 0.6, h: 4.0, valign: 'top' });
+                  }
+
+                  // Card phải: Công thức hoặc ghi chú
+                  if (hasSideBox) {
+                    const rX = 8.1;
+                    const rW = 4.6;
+                    slide.addShape('roundRect', {
+                      x: rX, y: 1.4, w: rW, h: 4.9, fill: { color: 'F0FDF4' }, line: { color: 'BBF7D0', width: 1 }
+                    });
+                    slide.addText('KHÁI NIỆM & CÔNG THỨC TRỌNG TÂM', {
+                      x: rX + 0.3, y: 1.6, w: rW - 0.6, h: 0.35, fontSize: 11, bold: true, color: '166534', fontFace: 'Arial'
+                    });
+
+                    if (s.formula) {
+                      slide.addShape('roundRect', {
+                        x: rX + 0.3, y: 2.1, w: rW - 0.6, h: 1.1, fill: { color: '0F172A' }
+                      });
+                      slide.addText(s.formula, {
+                        x: rX + 0.3, y: 2.1, w: rW - 0.6, h: 1.1, fontSize: 12, fontFace: 'Courier New', bold: true, color: '34D399', align: 'center', valign: 'middle'
+                      });
+                    }
+
+                    if (s.calloutBox) {
+                      const boxY = s.formula ? 3.35 : 2.1;
+                      const boxH = s.formula ? 2.8 : 4.0;
+                      slide.addText(s.calloutBox.title.toUpperCase(), {
+                        x: rX + 0.3, y: boxY, w: rW - 0.6, h: 0.35, fontSize: 11, bold: true, color: '047857', fontFace: 'Arial'
+                      });
+                      slide.addText(s.calloutBox.text, {
+                        x: rX + 0.3, y: boxY + 0.4, w: rW - 0.6, h: boxH - 0.5, fontSize: 11.5, color: '1F2937', fontFace: 'Arial', valign: 'top'
+                      });
+                    }
+                  }
+
+                  // Chân trang tĩnh
+                  slide.addShape('line', {
+                    x: 0.6, y: 6.6, w: 12.1, h: 0, line: { color: 'E2E8F0', width: 1 }
+                  });
+                  slide.addText(`${this.metadata.lessonName} | ${this.teacherProfile.school} | GV: ${this.teacherProfile.name}`, {
+                    x: 0.6, y: 6.7, w: 10.0, h: 0.4, fontSize: 9.5, color: '64748B', fontFace: 'Arial'
+                  });
+                  slide.addText(`Trang ${idx + 1}`, {
+                    x: 11.0, y: 6.7, w: 1.7, h: 0.4, fontSize: 9.5, color: '64748B', fontFace: 'Arial', align: 'right'
+                  });
+                }
+              });
+
+              pptx.writeFile({ fileName: `${safeName}_16x9_ChuanBo.pptx` });
+              this.slideNotice = `Đã xuất thành công tệp PowerPoint (.pptx) chuẩn 16:9 gồm ${this.slides.length} slide tĩnh!`;
+              setTimeout(() => this.slideNotice = null, 4000);
+              return;
+            } catch (err) {
+              console.error('Error exporting PPTX', err);
+            }
+          }
+
+          // Fallback nếu thư viện PPTX đang tải
+          this.downloadSlidesHtml();
+        },
+
+        // TẢI FILE HTML TĨNH ĐỘC LẬP
+        downloadSlidesHtml() {
+          const slidesHtml = this.slides.map((s, idx) => `
+            <div style="page-break-after: always; width: 100%; aspect-ratio: 16/9; background: ${idx === 0 ? '#0f172a' : '#ffffff'}; color: ${idx === 0 ? '#ffffff' : '#0f172a'}; border: 1px solid #cbd5e1; border-radius: 12px; margin-bottom: 24px; padding: 36px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+              <div style="border-bottom: 1px solid ${idx === 0 ? '#334155' : '#e2e8f0'}; padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="background: ${idx === 0 ? '#1e3a8a' : '#eff6ff'}; color: ${idx === 0 ? '#93c5fd' : '#1e40af'}; padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; text-transform: uppercase;">
+                  ${s.stageLabel || 'HOẠT ĐỘNG'}
+                </span>
+                <span style="font-size: 13px; color: ${idx === 0 ? '#94a3b8' : '#64748b'}; font-weight: bold;">
+                  Slide ${idx + 1} / ${this.slides.length} (Tĩnh)
+                </span>
+              </div>
+              <div style="margin: 20px 0;">
+                <h1 style="font-size: 24px; margin: 0 0 8px 0; color: ${idx === 0 ? '#ffffff' : '#0f172a'}; font-weight: bold;">${s.title}</h1>
+                ${s.subtitle ? `<p style="font-size: 14px; margin: 0 0 16px 0; color: ${idx === 0 ? '#cbd5e1' : '#475569'}; font-style: italic;">${s.subtitle}</p>` : ''}
+                <div style="display: flex; gap: 24px;">
+                  <div style="flex: 2; background: ${idx === 0 ? '#1e293b' : '#f8fafc'}; padding: 18px; border-radius: 8px; border: 1px solid ${idx === 0 ? '#334155' : '#e2e8f0'};">
+                    <strong style="display: block; font-size: 13px; text-transform: uppercase; color: ${idx === 0 ? '#60a5fa' : '#1e3a8a'}; margin-bottom: 10px;">Kiến thức & Nhiệm vụ học sinh:</strong>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
+                      ${s.bullets.map(b => `<li style="margin-bottom: 6px;">${b}</li>`).join('')}
+                    </ul>
+                  </div>
+                  ${s.calloutBox || s.formula ? `
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                      ${s.formula ? `
+                        <div style="background: #0f172a; color: #34d399; padding: 14px; border-radius: 8px; font-family: monospace; font-weight: bold; font-size: 13px; text-align: center;">
+                          ${s.formula}
+                        </div>
+                      ` : ''}
+                      ${s.calloutBox ? `
+                        <div style="background: ${idx === 0 ? '#064e3b' : '#ecfdf5'}; color: ${idx === 0 ? '#d1fae5' : '#065f46'}; padding: 14px; border-radius: 8px; border: 1px solid #a7f3d0; font-size: 13px; line-height: 1.5;">
+                          <strong style="display: block; margin-bottom: 4px; text-transform: uppercase;">${s.calloutBox.title}</strong>
+                          <p style="margin: 0;">${s.calloutBox.text}</p>
+                        </div>
+                      ` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+              <div style="border-top: 1px solid ${idx === 0 ? '#334155' : '#e2e8f0'}; padding-top: 12px; display: flex; justify-content: space-between; font-size: 12px; color: ${idx === 0 ? '#94a3b8' : '#64748b'};">
+                <span>${this.metadata.lessonName} · GV: <b>${this.teacherProfile.name}</b> · ${this.teacherProfile.school}</span>
+                <span>Năm học: ${this.teacherProfile.academicYear} · Trang ${idx + 1}</span>
+              </div>
+            </div>
+          `).join('');
+
+          const fullHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>${this.metadata.lessonName} - Slide Tĩnh 16:9</title><style>body { font-family: system-ui, sans-serif; background: #f1f5f9; margin: 0; padding: 24px; display: flex; flex-direction: column; align-items: center; } @media print { body { background: white; padding: 0; } }</style></head><body><div style="max-width: 1080px; width: 100%;"><div style="text-align: center; margin-bottom: 24px;"><h2 style="margin: 0; color: #0f172a;">${this.metadata.lessonName}</h2><p style="margin: 4px 0 0 0; color: #64748b; font-size: 14px;">Bộ slide tĩnh (${this.slides.length} slide) · GV: ${this.teacherProfile.name}</p></div>${slidesHtml}</div></body></html>`;
+          const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${this.metadata.lessonName.replace(/\s+/g, '_')}_Slide_Tinh.html`;
+          a.click();
+          URL.revokeObjectURL(url);
+          this.slideNotice = 'Đã tải xuống thành công tệp HTML slide tĩnh độc lập!';
+          setTimeout(() => this.slideNotice = null, 3500);
+        },
+
+        // TẢI ĐỀ CƯƠNG SLIDE DẠNG WORD (.DOC)
+        downloadSlidesWord() {
+          const content = `
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h1 style="font-size: 16pt; font-weight: bold; text-transform: uppercase;">ĐỀ CƯƠNG BÀI GIẢNG ĐIỆN TỬ (SLIDE TĨNH 16:9)</h1>
+              <h2>${this.metadata.lessonName}</h2>
+              <p>Môn: <b>${this.metadata.subject}</b> - Khối: <b>${this.metadata.grade}</b> - Sách: <b>${this.metadata.curriculum}</b></p>
+              <p>Giáo viên biên soạn: <b>${this.teacherProfile.name}</b> (${this.teacherProfile.school})</p>
+            </div>
+            ${this.slides.map((s, idx) => `
+              <div style="margin-bottom: 20pt; border-bottom: 1px solid #cccccc; padding-bottom: 15pt;">
+                <h3 style="font-size: 13pt; color: #1e3a8a;">Slide ${idx + 1}: [${s.stageLabel}] ${s.title}</h3>
+                ${s.subtitle ? `<p><i>${s.subtitle}</i></p>` : ''}
+                <p><b>Nội dung trọng tâm:</b></p>
+                <ul>
+                  ${s.bullets.map(b => `<li>${b}</li>`).join('')}
+                </ul>
+                ${s.formula ? `<p><b>Công thức:</b> <code>${s.formula}</code></p>` : ''}
+                ${s.calloutBox ? `<p><b>${s.calloutBox.title}:</b> ${s.calloutBox.text}</p>` : ''}
+                ${s.speakerNotes ? `<p style="color: #666666;"><i>Ghi chú sư phạm: ${s.speakerNotes}</i></p>` : ''}
+              </div>
+            `).join('')}
+          `;
+          const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Đề cương Slide</title><style>@page { size: A4; margin: 20mm; } body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.35; }</style></head><body>${content}</body></html>`;
+          const blob = new Blob(['\ufeff', header], { type: 'application/msword' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `De_Cuong_Slide_${this.metadata.subject}_${this.metadata.grade}.doc`;
+          a.click();
+          URL.revokeObjectURL(url);
+          this.slideNotice = 'Đã tải xuống thành công tệp Word Đề cương Slide!';
+          setTimeout(() => this.slideNotice = null, 3500);
+        },
+
+        toggleFullscreenPresentation() {
+          const el = document.getElementById('slide-deck-container');
+          if (el && el.requestFullscreen) {
+            el.requestFullscreen().catch(() => {});
+          }
+        },
+
+        downloadKHBDWord() {
+          const content = document.getElementById('khbd-print-area').innerHTML;
+          const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Kế hoạch bài dạy 5512</title><style>@page { size: A4; margin: 20mm; } body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.35; } table { width:100%; border-collapse: collapse; } th, td { border: 1px solid black; padding: 5pt; }</style></head><body>${content}</body></html>`;
+          const blob = new Blob(['\ufeff', header], { type: 'application/msword' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `KHBD_5512_${this.metadata.subject}_${this.metadata.grade}.doc`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+
+        downloadExamWord() {
+          const content = document.getElementById('live-document-print-area').innerHTML;
+          const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Đề kiểm tra định kì</title><style>@page { size: A4; margin: 20mm; } body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.35; }</style></head><body>${content}</body></html>`;
+          const blob = new Blob(['\ufeff', header], { type: 'application/msword' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `DE_KIEM_TRA_7991_${this.metadata.subject}_${this.metadata.grade}.doc`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+
+        loadPreset(preset) {
+          if (preset === 'toan') {
+            this.metadata.subject = 'Toán học';
+            this.metadata.grade = 'Lớp 10';
+            this.metadata.curriculum = 'Kết Nối Tri Thức';
+            this.metadata.lessonName = 'BÀI 15: HÀM SỐ BẬC HAI VÀ ĐỒ THỊ';
+          } else {
+            this.metadata.subject = 'Vật lí';
+            this.metadata.grade = 'Lớp 10';
+            this.metadata.curriculum = 'Kết Nối Tri Thức';
+            this.metadata.lessonName = 'BÀI 10: ĐỊNH LUẬT II NEWTON VÀ GIA TỐC';
+          }
+          this.activeMode = 'library';
+        },
+
+        getHandoverState() {
+          return {
+            scope: 'Full EdTech Suite (Kho Sách SGK/SGV + Setting Hồ Minh Luân + KHBD 5512 + Slide 16:9 + Đề Thi 7991 + Cloud Storage)',
+            timestamp: new Date().toISOString(),
+            activeMode: this.activeMode,
+            teacherProfile: this.teacherProfile,
+            uploadedBooksCount: this.uploadedBooks.length,
+            metadata: this.metadata,
+            khbdActivitiesCount: this.khbdActivities.length,
+            slidesCount: this.slides.length
+          };
+        },
+
+        init() {
+          this.convertKHBDToSlides();
+          this.activeMode = 'library';
+        }
+      };
+    }
+  </script>
+</body>
+</html>
